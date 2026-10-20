@@ -9,7 +9,7 @@ BUILD := build
 test: $(BUILD)/tests
 			./$(BUILD)/tests
 
-$(BUILD)/tests: $(wildcard src/*.c src/*h tests/*.c tests/*.h) | $(BUILD)
+$(BUILD)/tests: $(wildcard src/*.c src/*.h tests/*.c tests/*.h) | $(BUILD)
 		$(CC) $(CFLAGS) $(SANITIZE) -Isrc -o $@ $(filter %.c,$^)
 
 $(BUILD):

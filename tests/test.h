@@ -14,5 +14,6 @@ extern int test_failure_count;
   } while(0)
 
 void test_rng(void);
+void test_game(void);
 
 #endif

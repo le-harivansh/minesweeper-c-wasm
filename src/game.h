@@ -71,4 +71,7 @@ typedef struct {
   int opened_count;
 } Game;
 
+bool game_new(Game *game, Difficulty difficulty, uint32_t seed);
+MoveResult game_reveal(Game *game, int cell_index);
+
 #endif
