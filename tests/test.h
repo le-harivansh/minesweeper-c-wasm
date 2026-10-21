@@ -9,9 +9,9 @@
  * RUN()s its tests:
  *
  *     static void reveal_ignores_cells_off_the_board(void) {
- *       Game game;
- *       CHECK(game_new(&game, DIFFICULTY_BEGINNER, 1));
- *       CHECK_INT_EQUAL(game_reveal(&game, -1), MOVE_IGNORED);
+ *       Game game = game_create(DIFFICULTY_BEGINNER, 1);
+ *       game_reveal(&game, -1);
+ *       CHECK_INT_EQUAL(game.event_buffer.count, 0);
  *     }
  *
  *     void test_suite_game(void) {
@@ -28,7 +28,7 @@
 /**
  * Checks that a condition holds. When it doesn't, prints it as written:
  *
- *     tests/game.test.c:511: CHECK failed: game.first_cell == -1
+ *     tests/game.test.c:1084: CHECK failed: is_every_mine_flagged
  *
  * To compare two integers, use CHECK_INT_EQUAL(), which prints both values too.
  *
@@ -94,9 +94,9 @@
 /**
  * Runs a test and reports it by name.
  *
- * The name is module/test, as in game/chord_with_a_wrong_flag_loses. The test
- * is skipped unless its name contains the filter given to the test binary
- * (`make test ONLY=chord`). If any of its checks fail, prints FAIL and the
+ * The name is module/test, as in game/revealing_a_mine_loses. The test is
+ * skipped unless its name contains the filter given to the test binary
+ * (`make test ONLY=flag`). If any of its checks fail, prints FAIL and the
  * name after their messages.
  *
  * @param test A test function, `static void test(void)`, by name.

@@ -4,9 +4,9 @@
  * output) by Melissa O'Neill, pcg-random.org.
  *
  * Deterministic: the same seed and stream give the same numbers on every
- * platform, native and wasm32 alike, so a board can be dealt again from its
- * seed. No globals, no libc, no allocation: a generator is a 16-byte value
- * that you own.
+ * platform, native and wasm32 alike, so a board's mines can be placed again
+ * from its seed. No globals, no libc, no allocation: a generator is a 16-byte
+ * value that you own.
  *
  *     Random random = random_create(seed, stream);
  *     uint32_t pick = random_below(&random, 10);  // 0 to 9

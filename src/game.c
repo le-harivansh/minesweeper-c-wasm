@@ -1,318 +1,335 @@
 #include "game.h"
-#include "rng.h"
+#include "random.h"
 
-typedef struct {
-  int columns;
-  int rows;
-  int mine_count;
-} Preset;
-
-static constexpr Preset PRESETS[] = {
-  [DIFFICULTY_BEGINNER] = {9, 9, 10},
-  [DIFFICULTY_INTERMEDIATE] = {16, 16, 40},
-  [DIFFICULTY_EXPERT] = {30, 16, 99},
+/**
+ * Each difficulty's board, indexed by Difficulty. The designated indices keep
+ * every setup on its own difficulty, whatever order the enum lists them in.
+ */
+static constexpr BoardSetup BOARD_SETUPS[] = {
+  [DIFFICULTY_BEGINNER] = BOARD_SETUP_BEGINNER,
+  [DIFFICULTY_INTERMEDIATE] = BOARD_SETUP_INTERMEDIATE,
+  [DIFFICULTY_EXPERT] = BOARD_SETUP_EXPERT,
 };
 
+/** How many difficulties there are: a Difficulty at or past it is unknown. */
+static constexpr int DIFFICULTY_COUNT = sizeof BOARD_SETUPS / sizeof BOARD_SETUPS[0];
+
+/** The random stream the mines are placed from. The game uses no other. */
 static constexpr uint64_t PLACEMENT_STREAM = 0;
 
-static void start_game(Game *game, Preset preset, uint32_t seed) {
-  *game = (Game) {
-    .status = GAME_STATUS_READY,
-    .columns = preset.columns,
-    .rows = preset.rows,
-    .mine_count = preset.mine_count,
-    .seed = seed,
-    .first_cell = -1,
-    .exploded_cell = -1,
-  };
+static int cell_count(const Game *game) {
+  return game->columns * game->rows;
 }
 
-bool game_new(Game *game, Difficulty difficulty, uint32_t seed) {
-  if (difficulty >= sizeof PRESETS / sizeof PRESETS[0]) {
-    return false;
-  }
-
-  start_game(game, PRESETS[difficulty], seed);
-
-  return true;
-}
-
+/**
+ * Whether cell_index names a cell on this board. On the all-zeros game of an
+ * unknown difficulty none does, so every command on it stops here, before
+ * find_neighboring_cells() can divide by its 0 columns.
+ */
 static bool is_cell_on_board(const Game *game, int cell_index) {
-  return cell_index >= 0 && cell_index < game->columns * game->rows;
+  return cell_index >= 0 && cell_index < cell_count(game);
 }
 
 static bool is_over(const Game *game) {
   return game->status == GAME_STATUS_WON || game->status == GAME_STATUS_LOST;
 }
 
+/** The cells around one cell: 8, or 5 on an edge, or 3 in a corner. */
+typedef struct {
+  int count;
+  int cell_indices[8];
+} Neighbors;
+
+/**
+ * Finds the cells around cell_index that are on the board, in cell order.
+ *
+ * Works in rows and columns, not index offsets: cell_index - 1 from the first
+ * column is the last cell of the row above, which isn't a neighbor.
+ */
+static Neighbors find_neighboring_cells(const Game *game, int cell_index) {
+  int row = cell_index / game->columns;
+  int column = cell_index % game->columns;
+  Neighbors neighbors = {};
+
+  for (int neighbor_row = row - 1; neighbor_row <= row + 1; neighbor_row++) {
+    for (int neighbor_column = column - 1; neighbor_column <= column + 1; neighbor_column++) {
+      bool is_on_board = neighbor_row >= 0 && neighbor_row < game->rows && neighbor_column >= 0 && neighbor_column < game->columns;
+      bool is_self = neighbor_row == row && neighbor_column == column;
+
+      if (is_on_board && !is_self) {
+        neighbors.cell_indices[neighbors.count++] = neighbor_row * game->columns + neighbor_column;
+      }
+    }
+  }
+
+  return neighbors;
+}
+
+static int count_cells_with_state(const Game *game, CellState state) {
+  int count = 0;
+
+  for (int cell_index = 0; cell_index < cell_count(game); cell_index++) {
+    if (game->cells[cell_index].state == state) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+/**
+ * Adds an event to the move's buffer. No bounds check: MAX_MOVE_EVENTS is the
+ * most one move can write (game.h shows why), so it can't overflow.
+ */
+static void push_event(Game *game, Event event) {
+  game->event_buffer.events[game->event_buffer.count++] = event;
+}
+
+// Each change the player can see is made right next to the event that reports
+// it, so the events can't miss one.
+
+/**
+ * Uncovers a cell and writes its EVENT_CELL_REVEALED. Checks nothing: callers
+ * pass only hidden cells with no mine.
+ */
+static void reveal_cell(Game *game, int cell_index, int ring) {
+  Cell *cell = &game->cells[cell_index];
+
+  cell->state = CELL_REVEALED;
+  push_event(game, (Event) {
+    .type = EVENT_CELL_REVEALED,
+    .cell_revealed = {
+      .cell_index = cell_index,
+      .ring = ring,
+      .neighbor_mine_count = cell->neighbor_mine_count,
+    },
+  });
+}
+
+static void flag_cell(Game *game, int cell_index) {
+  game->cells[cell_index].state = CELL_FLAGGED;
+  push_event(game, (Event) {.type = EVENT_CELL_FLAGGED, .cell.cell_index = cell_index});
+}
+
+static void unflag_cell(Game *game, int cell_index) {
+  game->cells[cell_index].state = CELL_HIDDEN;
+  push_event(game, (Event) {.type = EVENT_CELL_UNFLAGGED, .cell.cell_index = cell_index});
+}
+
+/**
+ * Puts a mine in a cell and counts it in each neighbor's neighbor_mine_count,
+ * so the counts are finished when the last mine is placed.
+ */
+static void place_mine(Game *game, int cell_index) {
+  Neighbors neighbors = find_neighboring_cells(game, cell_index);
+
+  game->cells[cell_index].has_mine = true;
+
+  for (int i = 0; i < neighbors.count; i++) {
+    game->cells[neighbors.cell_indices[i]].neighbor_mine_count++;
+  }
+}
+
+/**
+ * Places the game's mines from its seed, anywhere but first_cell and its
+ * neighbors: first_cell's count is then 0, so the first reveal cascades.
+ *
+ * Needs at most rows × columns − 9 mines, or the candidates run out and
+ * random_below() gets a bound of 0. Every BoardSetup is well inside that:
+ * Expert keeps at least 471 candidates for its 99 mines.
+ */
 static void place_mines(Game *game, int first_cell) {
-  int first_row = first_cell / game->columns;
-  int first_column = first_cell % game->columns;
+  // Nothing here is for the player to see, so it writes no events.
+  bool is_kept_clear[MAX_CELLS] = {};
+  Neighbors neighbors = find_neighboring_cells(game, first_cell);
+
+  is_kept_clear[first_cell] = true;
+
+  for (int i = 0; i < neighbors.count; i++) {
+    is_kept_clear[neighbors.cell_indices[i]] = true;
+  }
 
   int candidates[MAX_CELLS];
   int candidate_count = 0;
 
-  for (int cell_index = 0; cell_index < game->columns * game->rows; cell_index++) {
-    int row = cell_index / game->columns;
-    int column = cell_index % game->columns;
-    bool is_near_first_cell = row >= first_row - 1 && row <= first_row + 1 && column >= first_column - 1 && column <= first_column + 1;
-
-    if (!is_near_first_cell) {
+  for (int cell_index = 0; cell_index < cell_count(game); cell_index++) {
+    if (!is_kept_clear[cell_index]) {
       candidates[candidate_count++] = cell_index;
     }
   }
 
-  Rng rng;
+  // A partial Fisher–Yates shuffle: each pick swaps a random remaining
+  // candidate to the front, so the first `mines` candidates end up a uniform
+  // random choice.
+  Random random = random_create(game->seed, PLACEMENT_STREAM);
 
-  rng_seed(&rng, game->seed, PLACEMENT_STREAM);
-
-  for (int i = 0; i < game->mine_count; i++) {
-    int pick = i + (int)rng_below(&rng, (uint32_t)(candidate_count - i));
+  for (int i = 0; i < game->mines; i++) {
+    int pick = i + (int)random_below(&random, (uint32_t)(candidate_count - i));
     int picked_cell = candidates[pick];
     candidates[pick] = candidates[i];
     candidates[i] = picked_cell;
-    game->cells[picked_cell].has_mine = true;
+    place_mine(game, picked_cell);
   }
 }
 
-static int find_neighbors(const Game *game, int cell_index, int neighbors[static 8]) {
-  int row = cell_index / game->columns;
-  int column = cell_index % game->columns;
-  int neighbor_count = 0;
+/**
+ * Reveals cell_index and spreads from every revealed cell with a count of 0
+ * to its hidden neighbors. Never reaches a mine: a count of 0 means no mine
+ * is around, so every cell it spreads to is safe.
+ */
+static void reveal_cascade(Game *game, int cell_index) {
+  // Breadth first, with this move's own CELL_REVEALED events as the queue:
+  // cells go in at the back and spread from the front, which writes them ring
+  // by ring.
+  int next = game->event_buffer.count;
 
-  for (int near_row = row - 1; near_row <= row + 1; near_row++) {
-    for (int near_column = column - 1; near_column <= column + 1; near_column++) {
-      bool is_on_board = near_row >= 0 && near_row < game->rows && near_column >= 0 && near_column < game->columns;
-      bool is_self = near_row == row && near_column == column;
+  reveal_cell(game, cell_index, 0);
 
-      if (is_on_board && !is_self) {
-        neighbors[neighbor_count++] = near_row * game->columns + near_column;
-      }
-    }
-  }
+  while (next < game->event_buffer.count) {
+    // Only reveal_cell() writes during the cascade, so this is a
+    // CELL_REVEALED and cell_revealed is the member to read.
+    Event reached = game->event_buffer.events[next++];
+    int reached_cell = reached.cell_revealed.cell_index;
 
-  return neighbor_count;
-}
-
-static void count_adjacent_mines(Game *game) {
-  for (int cell_index = 0; cell_index < game->columns * game->rows; cell_index++) {
-    int neighbors[8];
-    int neighbor_count = find_neighbors(game, cell_index, neighbors);
-    uint8_t adjacent_mine_count = 0;
-
-    for (int i = 0; i < neighbor_count; i++) {
-      if (game->cells[neighbors[i]].has_mine) {
-        adjacent_mine_count++;
-      }
-    }
-
-    game->cells[cell_index].adjacent_mine_count = adjacent_mine_count;
-  }
-}
-
-static void open_cell(Game *game, int cell_index, int ring) {
-  game->cells[cell_index].is_revealed = true;
-  game->revealed_count++;
-  game->opened_cells[game->opened_count++] = (OpenedCell) {
-    .cell_index = (uint16_t)cell_index,
-    .ring = (uint16_t)ring,
-  };
-}
-
-static void open_cascade(Game *game, const int first_cells[], int first_cell_count) {
-  game->opened_count = 0;
-
-  for (int i = 0; i < first_cell_count; i++) {
-    open_cell(game, first_cells[i], 0);
-  }
-
-  for (int next = 0; next < game->opened_count; next++) {
-    int cell_index = game->opened_cells[next].cell_index;
-    int ring = game->opened_cells[next].ring;
-
-    if (game->cells[cell_index].adjacent_mine_count != 0) {
+    if (game->cells[reached_cell].neighbor_mine_count != 0) {
       continue;
     }
 
-    int neighbors[8];
-    int neighbor_count = find_neighbors(game, cell_index, neighbors);
+    Neighbors neighbors = find_neighboring_cells(game, reached_cell);
 
-    for (int i = 0; i < neighbor_count; i++) {
-      Cell neighbor = game->cells[neighbors[i]];
+    for (int i = 0; i < neighbors.count; i++) {
+      int neighbor = neighbors.cell_indices[i];
 
-      if (!neighbor.is_revealed && !neighbor.is_flagged) {
-        open_cell(game, neighbors[i], ring + 1);
+      // reveal_cell() marks a cell revealed as it joins the queue, so a cell
+      // reached from two sides joins once. Flagged cells are skipped too.
+      if (game->cells[neighbor].state == CELL_HIDDEN) {
+        reveal_cell(game, neighbor, reached.cell_revealed.ring + 1);
       }
     }
   }
 }
 
-static MoveResult lose(Game *game, int exploded_cell) {
-  game->status = GAME_STATUS_LOST;
-  game->exploded_cell = exploded_cell;
-  game->opened_count = 0;
+/**
+ * Ends the game on a revealed mine: explodes it, shows every other unflagged
+ * mine and every wrong flag in cell order, then writes EVENT_GAME_LOST.
+ *
+ * Changes no cell, so the exploded mine stays CELL_HIDDEN: only the events
+ * show what the covers hid.
+ */
+static void lose(Game *game, int exploded_cell) {
+  push_event(game, (Event) {.type = EVENT_MINE_EXPLODED, .cell.cell_index = exploded_cell});
 
-  return MOVE_LOST;
-}
+  for (int cell_index = 0; cell_index < cell_count(game); cell_index++) {
+    Cell cell = game->cells[cell_index];
 
-static MoveResult check_win(Game *game) {
-  int safe_cell_count = game->columns * game->rows - game->mine_count;
+    if (cell_index == exploded_cell) {
+      continue;
+    }
 
-  if (game->revealed_count < safe_cell_count) {
-    return MOVE_OPENED;
-  }
-
-  game->status = GAME_STATUS_WON;
-
-  for (int cell_index = 0; cell_index < game->columns * game->rows; cell_index++) {
-    Cell *cell = &game->cells[cell_index];
-
-    if (cell->has_mine && !cell->is_flagged) {
-      cell->is_flagged = true;
-      game->flag_count++;
+    if (cell.has_mine && cell.state != CELL_FLAGGED) {
+      push_event(game, (Event) {.type = EVENT_MINE_SHOWN, .cell.cell_index = cell_index});
+    } else if (!cell.has_mine && cell.state == CELL_FLAGGED) {
+      push_event(game, (Event) {.type = EVENT_WRONG_FLAG_SHOWN, .cell.cell_index = cell_index});
     }
   }
 
-  return MOVE_WON;
+  game->status = GAME_STATUS_LOST;
+  push_event(game, (Event) {.type = EVENT_GAME_LOST});
 }
 
-MoveResult game_reveal(Game *game, int cell_index) {
-  if (!is_cell_on_board(game, cell_index) || is_over(game)) {
-    return MOVE_IGNORED;
+/**
+ * Wins the game once every safe cell is revealed: flags each mine not yet
+ * flagged, then writes EVENT_GAME_WON.
+ *
+ * Counting revealed cells is enough: revealing a mine loses the game, so
+ * every revealed cell is safe.
+ */
+static void check_win(Game *game) {
+  if (count_cells_with_state(game, CELL_REVEALED) < cell_count(game) - game->mines) {
+    return;
   }
 
-  Cell cell = game->cells[cell_index];
+  for (int cell_index = 0; cell_index < cell_count(game); cell_index++) {
+    Cell cell = game->cells[cell_index];
 
-  if (cell.is_revealed || cell.is_flagged) {
-    return MOVE_IGNORED;
+    if (cell.has_mine && cell.state != CELL_FLAGGED) {
+      flag_cell(game, cell_index);
+    }
+  }
+
+  game->status = GAME_STATUS_WON;
+  push_event(game, (Event) {.type = EVENT_GAME_WON});
+}
+
+Game game_create(Difficulty difficulty, uint32_t seed) {
+  // Difficulty is unsigned, so this one check catches every unknown value.
+  if (difficulty >= DIFFICULTY_COUNT) {
+    return (Game) {};
+  }
+
+  BoardSetup setup = BOARD_SETUPS[difficulty];
+
+  Game game = {
+    .rows = setup.rows,
+    .columns = setup.columns,
+    .mines = setup.mines,
+    .seed = seed,
+    .status = GAME_STATUS_READY,
+  };
+
+  push_event(&game, (Event) {
+    .type = EVENT_GAME_STARTED,
+    .game_started = {
+      .rows = setup.rows,
+      .columns = setup.columns,
+      .mines = setup.mines,
+    },
+  });
+
+  return game;
+}
+
+void game_reveal(Game *game, int cell_index) {
+  game->event_buffer.count = 0;
+
+  if (!is_cell_on_board(game, cell_index) || is_over(game)) {
+    return;
+  }
+
+  if (game->cells[cell_index].state != CELL_HIDDEN) {
+    return;
   }
 
   if (game->status == GAME_STATUS_READY) {
     place_mines(game, cell_index);
-    count_adjacent_mines(game);
-    game->first_cell = cell_index;
     game->status = GAME_STATUS_PLAYING;
   }
 
   if (game->cells[cell_index].has_mine) {
-    return lose(game, cell_index);
+    lose(game, cell_index);
+  } else {
+    reveal_cascade(game, cell_index);
+    check_win(game);
   }
-
-  open_cascade(game, &cell_index, 1);
-
-  return check_win(game);
 }
 
-MoveResult game_toggle_flag(Game *game, int cell_index) {
+void game_toggle_flag(Game *game, int cell_index) {
+  game->event_buffer.count = 0;
+
   if (!is_cell_on_board(game, cell_index) || is_over(game)) {
-    return MOVE_IGNORED;
+    return;
   }
 
-  Cell *cell = &game->cells[cell_index];
-
-  if (cell->is_revealed) {
-    return MOVE_IGNORED;
-  }
-
-  game->opened_count = 0;
-  cell->is_flagged = !cell->is_flagged;
-
-  if (cell->is_flagged) {
-    game->flag_count++;
-
-    return MOVE_FLAGGED;
-  }
-
-  game->flag_count--;
-
-  return MOVE_UNFLAGGED;
-}
-
-MoveResult game_chord(Game *game, int cell_index) {
-  if (!is_cell_on_board(game, cell_index) || game->status != GAME_STATUS_PLAYING) {
-    return MOVE_IGNORED;
-  }
-
-  Cell cell = game->cells[cell_index];
-
-  if (!cell.is_revealed) {
-    return MOVE_IGNORED;
-  }
-
-  int neighbors[8];
-  int neighbor_count = find_neighbors(game, cell_index, neighbors);
-  int flagged_neighbor_count = 0;
-  int hidden_neighbors[8];
-  int hidden_neighbor_count = 0;
-
-  for (int i = 0; i < neighbor_count; i++) {
-    Cell neighbor = game->cells[neighbors[i]];
-
-    if (neighbor.is_flagged) {
-      flagged_neighbor_count++;
-    } else if (!neighbor.is_revealed) {
-      hidden_neighbors[hidden_neighbor_count++] = neighbors[i];
-    }
-  }
-
-  if (hidden_neighbor_count == 0) {
-    return MOVE_IGNORED;
-  }
-
-  if (flagged_neighbor_count != cell.adjacent_mine_count) {
-    return MOVE_REFUSED;
-  }
-
-  for (int i = 0; i < hidden_neighbor_count; i++) {
-    if (game->cells[hidden_neighbors[i]].has_mine) {
-      return lose(game, hidden_neighbors[i]);
-    }
-  }
-
-  open_cascade(game, hidden_neighbors, hidden_neighbor_count);
-
-  return check_win(game);
-}
-
-MoveResult game_replay(Game *game) {
-  int first_cell = game->first_cell;
-
-  if (first_cell == -1) {
-    return MOVE_IGNORED;
-  }
-
-  Preset preset = {game->columns, game->rows, game->mine_count};
-
-  start_game(game, preset, game->seed);
-
-  return game_reveal(game, first_cell);
-}
-
-static CellView view_cell(const Game *game, int cell_index) {
-  Cell cell = game->cells[cell_index];
-  bool is_lost = game->status == GAME_STATUS_LOST;
-
-  if (cell.is_revealed) {
-    return (CellView)cell.adjacent_mine_count;
-  }
-
-  if (cell_index == game->exploded_cell) {
-    return CELL_VIEW_EXPLODED;
-  }
-
-  if (cell.is_flagged) {
-    return is_lost && !cell.has_mine ? CELL_VIEW_WRONG_FLAG : CELL_VIEW_FLAGGED;
-  }
-
-  if (is_lost && cell.has_mine) {
-    return CELL_VIEW_MINE;
-  }
-
-  return CELL_VIEW_HIDDEN;
-}
-
-void game_write_views(const Game *game, CellView views[static MAX_CELLS]) {
-  for (int cell_index = 0; cell_index < game->columns * game->rows; cell_index++) {
-    views[cell_index] = view_cell(game, cell_index);
+  switch (game->cells[cell_index].state) {
+    case CELL_HIDDEN:
+      flag_cell(game, cell_index);
+      break;
+    case CELL_FLAGGED:
+      unflag_cell(game, cell_index);
+      break;
+    case CELL_REVEALED:
+      // A revealed cell takes no flag. Listed, not left to a default case, so
+      // -Wswitch warns about a CellState missing here.
+      break;
   }
 }

@@ -5,14 +5,14 @@
 
 /**
  * The text a test's full name must contain for it to run: the test binary's
- * argument, which `make test ONLY=chord` passes. Every string contains "", so
+ * argument, which `make test ONLY=flag` passes. Every string contains "", so
  * the default, like an empty ONLY, runs every test.
  */
 static const char *test_filter = "";
 
 /**
  * The module whose suite is running, set by run_suite(): the "game" in
- * game/chord_with_a_wrong_flag_loses.
+ * game/revealing_a_mine_loses.
  */
 static const char *test_module = "";
 
@@ -57,7 +57,7 @@ void test_check_int_equal(
   failed_check_count++;
 
   // Print the expected expression as written, unless it is just the number:
-  // "expected MOVE_OPENED (1)", but "expected 58", not "expected 58 (58)".
+  // "expected GAME_STATUS_LOST (3)", but "expected 58", not "expected 58 (58)".
   // 24 bytes hold any long long: LLONG_MIN is 20 characters, plus the null.
   char expected_number[24];
   snprintf(expected_number, sizeof expected_number, "%lld", expected);

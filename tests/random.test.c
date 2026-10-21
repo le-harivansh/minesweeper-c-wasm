@@ -5,10 +5,9 @@
  * Two kinds of test. The reference tests compare exact outputs with values
  * worked out without this code: PCG's published outputs, or arithmetic done by
  * hand on them. They are the only tests that know the right numbers, so they
- * are the ones that catch a change to what a seed produces (which would deal a
- * different board from the same seed). The statistical tests count many draws
- * and compare the counts with what a fair generator gives; any good generator
- * passes them.
+ * are the ones that catch a change to what a seed produces (which would move
+ * the mines a seed places). The statistical tests count many draws and compare
+ * the counts with what a fair generator gives; any good generator passes them.
  *
  * Every test starts from a fixed seed, so it draws the same numbers on every
  * run and can't pass once and fail the next time. The statistical windows are
@@ -60,8 +59,8 @@ static void create_and_next_match_the_pcg_reference(void) {
  * reduces the rest with %, step for step like pcg32_boundedrand_r.
  *
  * The statistical tests would also pass with another unbiased method, such as
- * Lemire's multiply-and-shift, but a different method deals different boards
- * from the same seed. This test pins the method.
+ * Lemire's multiply-and-shift, but a different method would place the mines
+ * differently from the same seed. This test pins the method.
  *
  * Bound 2^31 + 1 keeps the arithmetic doable by hand: the threshold is
  * 2^32 - (2^31 + 1) = 0x7fffffff, so a raw value under it is skipped, and each
@@ -99,8 +98,7 @@ static void below_returns_less_than_the_bound(void) {
     1,           // The smallest: 0 is the only answer.
     2,           // A power of two divides 2^32, so nothing is skipped.
     3, 7,        // Small and not powers of two: 1 and 4 raw values are skipped.
-    81, 480,     // Board sizes in cells: Beginner and Expert.
-    720,         // MAX_CELLS, the largest board.
+    81, 480,     // Board sizes in cells: Beginner and Expert (MAX_CELLS).
     0x80000001,  // 2^31 + 1, the most skipping: almost half of all raw values.
     UINT32_MAX,  // The largest: results reach 2^32 - 2.
   };
