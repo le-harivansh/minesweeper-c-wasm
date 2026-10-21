@@ -1,0 +1,7 @@
+# clangd takes its flags from compile_flags.txt, the same for every file.
+# src/minesweeper.c is built for wasm32 only (`make wasm`): without the
+# target, clangd warns that its import and export attributes are unknown.
+If:
+  PathMatch: src/minesweeper\.c
+CompileFlags:
+  Add: [--target=wasm32]

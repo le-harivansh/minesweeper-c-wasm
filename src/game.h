@@ -75,8 +75,8 @@ typedef enum : uint8_t {
  * after it. Each says which member of Event holds its data.
  */
 typedef enum : uint8_t {
-  /** A new, empty board. Uses game_started. */
-  EVENT_GAME_STARTED,
+  /** A new, empty board. Uses game_created. */
+  EVENT_GAME_CREATED,
   /**
    * A safe cell uncovered. Uses cell_revealed. A reveal writes its cells in
    * the order it reached them, ring by ring.
@@ -112,7 +112,7 @@ typedef struct {
       int rows;
       int columns;
       int mines;
-    } game_started;
+    } game_created;
     struct {
       int cell_index;
       /**
@@ -205,7 +205,7 @@ typedef struct {
  * cell and its neighbors, so the first reveal is never a mine and always
  * reveals its neighbors too.
  *
- * The new game's event_buffer holds EVENT_GAME_STARTED. For an unknown
+ * The new game's event_buffer holds EVENT_GAME_CREATED. For an unknown
  * difficulty, the game is all zeros: no cells and no events, so every command
  * on it does nothing.
  *

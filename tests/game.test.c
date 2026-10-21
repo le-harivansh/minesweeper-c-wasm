@@ -146,10 +146,10 @@ static Event revealed_event(int cell_index, int ring, int neighbor_mine_count) {
   };
 }
 
-static Event game_started_event(BoardSetup setup) {
+static Event game_created_event(BoardSetup setup) {
   return (Event) {
-    .type = EVENT_GAME_STARTED,
-    .game_started = {
+    .type = EVENT_GAME_CREATED,
+    .game_created = {
       .rows = setup.rows,
       .columns = setup.columns,
       .mines = setup.mines,
@@ -168,10 +168,10 @@ static bool events_are_equal(Event a, Event b) {
 
   // No default case, so -Wswitch warns about an EventType missing here.
   switch (a.type) {
-    case EVENT_GAME_STARTED:
-      return a.game_started.rows == b.game_started.rows &&
-        a.game_started.columns == b.game_started.columns &&
-        a.game_started.mines == b.game_started.mines;
+    case EVENT_GAME_CREATED:
+      return a.game_created.rows == b.game_created.rows &&
+        a.game_created.columns == b.game_created.columns &&
+        a.game_created.mines == b.game_created.mines;
     case EVENT_CELL_REVEALED:
       return a.cell_revealed.cell_index == b.cell_revealed.cell_index &&
         a.cell_revealed.ring == b.cell_revealed.ring &&
@@ -255,7 +255,7 @@ typedef struct {
 
 /**
  * Applies the game's last move to the board, event by event, as the browser
- * would. EVENT_GAME_STARTED sets the board up, so the first move it sees must
+ * would. EVENT_GAME_CREATED sets the board up, so the first move it sees must
  * be a new game's.
  */
 static void see_move(PlayerBoard *board, const Game *game) {
@@ -263,9 +263,9 @@ static void see_move(PlayerBoard *board, const Game *game) {
     Event event = game->event_buffer.events[i];
 
     switch (event.type) {
-      case EVENT_GAME_STARTED:
-        board->rows = event.game_started.rows;
-        board->columns = event.game_started.columns;
+      case EVENT_GAME_CREATED:
+        board->rows = event.game_created.rows;
+        board->columns = event.game_created.columns;
         memset(board->cells, '\0', sizeof board->cells);
         memset(board->cells, '#', (size_t)(board->rows * board->columns));
         break;
@@ -596,7 +596,7 @@ static bool names_each_cell_at_most_once(const EventBuffer *move) {
   for (int i = 0; i < move->count; i++) {
     Event event = move->events[i];
 
-    if (event.type == EVENT_GAME_STARTED || event.type == EVENT_GAME_WON || event.type == EVENT_GAME_LOST) {
+    if (event.type == EVENT_GAME_CREATED || event.type == EVENT_GAME_WON || event.type == EVENT_GAME_LOST) {
       continue;
     }
 
@@ -646,7 +646,7 @@ static bool ends_exactly_when_the_game_ends(const Game *before, const Game *afte
 
 /**
  * Whether the move's events are ones its command can write (game.h): a new
- * game, EVENT_GAME_STARTED alone; a flag, one flag event on its cell; a
+ * game, EVENT_GAME_CREATED alone; a flag, one flag event on its cell; a
  * reveal, either an explosion of the revealed mine or a cascade that starts
  * at the revealed cell, ring 0. No events at all always fits: other rules
  * check that the command then changed nothing.
@@ -655,7 +655,7 @@ static bool move_fits_the_command(const Game *after, Command command, int cell_i
   const EventBuffer *move = &after->event_buffer;
 
   if (command == COMMAND_NEW_GAME) {
-    return move->count == 1 && move->events[0].type == EVENT_GAME_STARTED;
+    return move->count == 1 && move->events[0].type == EVENT_GAME_CREATED;
   }
 
   if (move->count == 0) {
@@ -677,7 +677,7 @@ static bool move_fits_the_command(const Game *after, Command command, int cell_i
   for (int i = 0; i < move->count; i++) {
     EventType type = move->events[i].type;
 
-    if (type == EVENT_GAME_STARTED || type == EVENT_CELL_UNFLAGGED || (type == EVENT_MINE_EXPLODED && i != 0)) {
+    if (type == EVENT_GAME_CREATED || type == EVENT_CELL_UNFLAGGED || (type == EVENT_MINE_EXPLODED && i != 0)) {
       return false;
     }
 
@@ -780,7 +780,7 @@ typedef struct {
 } BrokenRule;
 
 /**
- * game_create() sets up each difficulty's board, and its EVENT_GAME_STARTED
+ * game_create() sets up each difficulty's board, and its EVENT_GAME_CREATED
  * says so.
  *
  * The sizes are classic Minesweeper's: 9 × 9 with 10 mines, 16 × 16 with 40,
@@ -793,24 +793,24 @@ static void create_uses_each_board_setup(void) {
   CHECK_INT_EQUAL(game.rows, 9);
   CHECK_INT_EQUAL(game.mines, 10);
 
-  Event beginner_started[] = {game_started_event(BOARD_SETUP_BEGINNER)};
-  CHECK(event_buffer_is(&game, beginner_started, 1));
+  Event beginner_created[] = {game_created_event(BOARD_SETUP_BEGINNER)};
+  CHECK(event_buffer_is(&game, beginner_created, 1));
 
   game = game_create(DIFFICULTY_INTERMEDIATE, SEED);
   CHECK_INT_EQUAL(game.columns, 16);
   CHECK_INT_EQUAL(game.rows, 16);
   CHECK_INT_EQUAL(game.mines, 40);
 
-  Event intermediate_started[] = {game_started_event(BOARD_SETUP_INTERMEDIATE)};
-  CHECK(event_buffer_is(&game, intermediate_started, 1));
+  Event intermediate_created[] = {game_created_event(BOARD_SETUP_INTERMEDIATE)};
+  CHECK(event_buffer_is(&game, intermediate_created, 1));
 
   game = game_create(DIFFICULTY_EXPERT, SEED);
   CHECK_INT_EQUAL(game.columns, 30);
   CHECK_INT_EQUAL(game.rows, 16);
   CHECK_INT_EQUAL(game.mines, 99);
 
-  Event expert_started[] = {game_started_event(BOARD_SETUP_EXPERT)};
-  CHECK(event_buffer_is(&game, expert_started, 1));
+  Event expert_created[] = {game_created_event(BOARD_SETUP_EXPERT)};
+  CHECK(event_buffer_is(&game, expert_created, 1));
 }
 
 /**
@@ -830,7 +830,7 @@ static void every_board_setup_fits_and_leaves_room_for_the_first_click(void) {
 
 /**
  * game_create() returns a game ready for its first reveal: the seed kept, no
- * mines, every cell hidden with a count of 0, and EVENT_GAME_STARTED as its
+ * mines, every cell hidden with a count of 0, and EVENT_GAME_CREATED as its
  * only event.
  */
 static void create_returns_a_ready_and_empty_game(void) {
@@ -839,7 +839,7 @@ static void create_returns_a_ready_and_empty_game(void) {
   CHECK_INT_EQUAL(game.status, GAME_STATUS_READY);
   CHECK_INT_EQUAL(game.seed, SEED);
 
-  Event expected[] = {game_started_event(BOARD_SETUP_EXPERT)};
+  Event expected[] = {game_created_event(BOARD_SETUP_EXPERT)};
   CHECK(event_buffer_is(&game, expected, 1));
 
   bool is_empty = true;
@@ -1630,7 +1630,7 @@ static void random_play_keeps_every_rule(void) {
 
       // Each move counts as the kind its last event says.
       const EventBuffer *played = &game.event_buffer;
-      EventType last = played->count > 0 ? played->events[played->count - 1].type : EVENT_GAME_STARTED;
+      EventType last = played->count > 0 ? played->events[played->count - 1].type : EVENT_GAME_CREATED;
 
       if (played->count == 0) {
         ignored_count++;

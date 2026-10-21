@@ -85,6 +85,15 @@ static void push_event(Game *game, Event event) {
   game->event_buffer.events[game->event_buffer.count++] = event;
 }
 
+/**
+ * Empties the buffer for a new command. game_reveal() and game_toggle_flag()
+ * call this first, and game_create() starts from an empty one, so the buffer
+ * holds one move's events at most, which push_event() relies on.
+ */
+static void clear_event_buffer(Game *game) {
+  game->event_buffer.count = 0;
+}
+
 // Each change the player can see is made right next to the event that reports
 // it, so the events can't miss one.
 
@@ -278,8 +287,8 @@ Game game_create(Difficulty difficulty, uint32_t seed) {
   };
 
   push_event(&game, (Event) {
-    .type = EVENT_GAME_STARTED,
-    .game_started = {
+    .type = EVENT_GAME_CREATED,
+    .game_created = {
       .rows = setup.rows,
       .columns = setup.columns,
       .mines = setup.mines,
@@ -290,7 +299,7 @@ Game game_create(Difficulty difficulty, uint32_t seed) {
 }
 
 void game_reveal(Game *game, int cell_index) {
-  game->event_buffer.count = 0;
+  clear_event_buffer(game);
 
   if (!is_cell_on_board(game, cell_index) || is_over(game)) {
     return;
@@ -314,7 +323,7 @@ void game_reveal(Game *game, int cell_index) {
 }
 
 void game_toggle_flag(Game *game, int cell_index) {
-  game->event_buffer.count = 0;
+  clear_event_buffer(game);
 
   if (!is_cell_on_board(game, cell_index) || is_over(game)) {
     return;
