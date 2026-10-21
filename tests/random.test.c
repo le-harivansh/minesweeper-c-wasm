@@ -51,7 +51,7 @@ static void create_and_next_match_the_pcg_reference(void) {
   Random random = random_create(REFERENCE_SEED, REFERENCE_STREAM);
 
   for (size_t i = 0; i < sizeof expected / sizeof expected[0]; i++) {
-    CHECK_EQUAL(random_next(&random), expected[i]);
+    CHECK_INT_EQUAL(random_next(&random), expected[i]);
   }
 }
 
@@ -83,7 +83,7 @@ static void below_skips_raw_values_under_the_threshold(void) {
   Random random = random_create(REFERENCE_SEED, REFERENCE_STREAM);
 
   for (size_t i = 0; i < sizeof expected / sizeof expected[0]; i++) {
-    CHECK_EQUAL(random_below(&random, bound), expected[i]);
+    CHECK_INT_EQUAL(random_below(&random, bound), expected[i]);
   }
 }
 
@@ -149,7 +149,7 @@ static void below_returns_each_value_equally_often(void) {
   }
 
   for (uint32_t value = 0; value < bound; value++) {
-    CHECK_NEAR(counts[value], expected_count, tolerance);
+    CHECK_INT_NEAR(counts[value], expected_count, tolerance);
   }
 }
 
@@ -180,10 +180,10 @@ static void below_has_no_modulo_bias(void) {
     }
   }
 
-  CHECK_NEAR(bottom_third_count, expected_count, tolerance);
+  CHECK_INT_NEAR(bottom_third_count, expected_count, tolerance);
 }
 
-void test_random(void) {
+void test_suite_random(void) {
   RUN(create_and_next_match_the_pcg_reference);
   RUN(below_skips_raw_values_under_the_threshold);
   RUN(below_returns_less_than_the_bound);
