@@ -1,0 +1,64 @@
+/*
+ * Global styles: the site's (harivansh.dev, src/styles/global.css) that reach
+ * the game: the page's base, the keyboard focus ring, the reduced-motion
+ * switch and the page column. The site styles no button, select or input, so
+ * the game's controls start from the browser's own.
+ */
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The ring is for the keyboard only. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+
+#main:focus {
+  outline: none;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+.container {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 40px var(--gutter) 0;
+}
+
+@media (max-width: 1024px) {
+  .container {
+    padding-top: 30px;
+  }
+}
+
+@media (max-width: 540px) {
+  .container {
+    padding-top: 24px;
+  }
+}

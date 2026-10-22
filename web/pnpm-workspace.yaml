@@ -1,0 +1,12 @@
+# pnpm 11 reads settings from here, not from package.json's "pnpm" field.
+# As the site: allow the post-install build scripts of esbuild (Vite's
+# bundler) and sharp (Astro's image pipeline).
+allowBuilds:
+  esbuild: true
+  sharp: true
+
+# The site's Vite, not the newest one Astro 7.2.2 allows. Vite decides what
+# gets inlined into the page (a small asset, a small script), so the harness
+# builds with the same version. Change it when the site's lockfile does.
+overrides:
+  vite: 8.2.1

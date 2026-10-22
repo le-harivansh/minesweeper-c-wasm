@@ -1,0 +1,29 @@
+---
+/**
+ * The game. Its only public entry: the Lab entry's MDX mounts it.
+ *
+ * Renders the controls, the status line and an empty board; main.ts loads the
+ * game into them. For now the board is a bare grid (bare-grid.ts).
+ */
+import './minesweeper.css';
+---
+
+<div class="minesweeper">
+  <div class="minesweeper__controls">
+    <label>
+      Difficulty
+      <select class="minesweeper__difficulty">
+        <option value="beginner">Beginner</option>
+        <option value="intermediate">Intermediate</option>
+        <option value="expert">Expert</option>
+      </select>
+    </label>
+    <button class="minesweeper__new-game" type="button">New game</button>
+  </div>
+  <p class="minesweeper__status" aria-live="polite">Loading…</p>
+  <div class="minesweeper__board"></div>
+</div>
+
+<script>
+  import './main.ts';
+</script>

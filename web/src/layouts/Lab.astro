@@ -1,0 +1,85 @@
+---
+/**
+ * A stand-in for the site's Lab page (harivansh.dev, src/layouts/Base.astro
+ * and Lab.astro), copied only where the game can see it: the fonts and
+ * tokens, the Lab skin on <body>, the elements around the entry's content
+ * and, in a production build, the site's Content-Security-Policy.
+ */
+import type { CollectionEntry } from 'astro:content';
+import '../styles/fonts.css';
+import '../styles/tokens.css';
+import '../styles/global.css';
+
+interface Props {
+  entry: CollectionEntry<'lab'>;
+}
+
+const { title } = Astro.props.entry.data;
+
+// The site's `cyanotype` Lab skin, as Base.astro sets it on <body>: the site
+// derives muted, rule and thumb from the ink (src/utils/skin.ts).
+const SKIN =
+  '--ground: #8CBAE1; --ink: #17130A; --muted: rgba(23, 19, 10, 0.68); ' +
+  '--rule: rgba(23, 19, 10, 0.24); --thumb: rgba(23, 19, 10, 0.38); --signal: #0E4E33;';
+
+// The site's policy (public/_headers) plus 'wasm-unsafe-eval', which the
+// site has to add for the game: without it, the browser won't compile the
+// module. frame-ancestors is left out: a <meta> policy can't set it. In
+// production only: Astro's dev server runs inline scripts and a websocket,
+// which this policy blocks.
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self'",
+  "font-src 'self'",
+  "connect-src 'self' https://cloudflareinsights.com",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "object-src 'none'",
+].join('; ');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    {
+      import.meta.env.PROD && (
+        <meta http-equiv="Content-Security-Policy" content={CONTENT_SECURITY_POLICY} />
+      )
+    }
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>{title}</title>
+  </head>
+  <body style={SKIN}>
+    <div class="container">
+      <main id="main" tabindex="-1">
+        <article class="lab lab--essay" aria-labelledby="lab-title">
+          <h1 id="lab-title">{title}</h1>
+          <slot />
+        </article>
+      </main>
+    </div>
+  </body>
+</html>
+
+<style is:global>
+  /* Global, as the site's: the entry's content is out of reach of scoped styles. */
+  .lab-play {
+    margin-top: 56px;
+  }
+
+  @media (max-width: 1024px) {
+    .lab-play {
+      margin-top: 48px;
+    }
+  }
+
+  @media (max-width: 540px) {
+    .lab-play {
+      margin-top: 40px;
+    }
+  }
+</style>

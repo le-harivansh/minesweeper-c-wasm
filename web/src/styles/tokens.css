@@ -1,0 +1,27 @@
+/*
+ * Tokens: the site's (harivansh.dev, src/styles/tokens.css) that the game can
+ * read, the type stacks and the page column. The colours come from the Lab
+ * skin on <body> (layouts/Lab.astro).
+ */
+
+:root {
+  --font-sans: 'Archivo', sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* One 1200px column; the gutter steps down at the site's two breakpoints. */
+  --container: 1200px;
+  --gutter: clamp(20px, 8.33vw, 120px);
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --gutter: 56px;
+  }
+}
+
+@media (max-width: 540px) {
+  :root {
+    --gutter: 20px;
+  }
+}

@@ -1,0 +1,67 @@
+/*
+ * The game's styles. Global, not scoped: the cells are made by script, which
+ * Astro's scoped styles never reach. Every selector sits under .minesweeper,
+ * so nothing leaks onto the page.
+ *
+ * For now the bare grid, in the page's own colours.
+ */
+
+.minesweeper {
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 15px;
+}
+
+.minesweeper__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+}
+
+.minesweeper__controls label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.minesweeper__status {
+  margin: 16px 0;
+  color: var(--muted);
+}
+
+/* Expert is 30 columns, wider than a phone: the board scrolls sideways. */
+.minesweeper__board {
+  --cell-size: 28px;
+
+  display: grid;
+  grid-template-columns: repeat(var(--columns), var(--cell-size));
+  gap: 2px;
+  max-width: 100%;
+  width: max-content;
+  overflow-x: auto;
+  user-select: none;
+}
+
+.minesweeper__board button {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  padding: 0;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 500;
+}
+
+.minesweeper__board button[data-state='hidden'],
+.minesweeper__board button[data-state='flagged'] {
+  background: var(--ink);
+  color: var(--ground);
+  cursor: pointer;
+}
+
+.minesweeper__board button[data-state='exploded'] {
+  background: var(--muted);
+  color: var(--ground);
+}

@@ -1,3 +1,7 @@
 build/
 
 .vscode/settings.local.json
+web/node_modules/
+web/dist/
+web/.astro/
+web/src/lab/minesweeper/minesweeper.wasm
