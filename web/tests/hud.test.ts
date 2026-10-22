@@ -1,7 +1,7 @@
 /**
  * Tests the pure half of web/src/lab/minesweeper/hud.ts: how the clock shows
- * a time, and the messages read out when a game ends. The half that updates
- * the page is checked in the browser.
+ * a time, and the messages read out when a game ends, with the part each sets
+ * in bold. The half that updates the page is checked in the browser.
  *
  * Run with `make test-wasm`. Node runs this file as it is, by stripping the
  * types without checking them; `pnpm check` (astro check) checks them.
@@ -10,7 +10,13 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { GameEvent } from '../src/lab/minesweeper/game-core.ts';
 import { applyMove, EMPTY_BOARD } from '../src/lab/minesweeper/game-session.ts';
-import { formatDuration, lossMessage, winMessage } from '../src/lab/minesweeper/hud.ts';
+import {
+  formatDuration,
+  lossMessage,
+  messageText,
+  winMessage,
+  type MessagePart,
+} from '../src/lab/minesweeper/hud.ts';
 
 /** A lost 3 × 3 game, mines at 2, 3 and 6, after these flags (as in game-session.test.ts). */
 function lostWithFlags(flags: { cellIndex: number; isMine: boolean }[]) {
@@ -28,6 +34,11 @@ function lostWithFlags(flags: { cellIndex: number; isMine: boolean }[]) {
   return applyMove(EMPTY_BOARD, move);
 }
 
+/** What a message sets in bold, in order. */
+function strongParts(parts: readonly MessagePart[]): string[] {
+  return parts.flatMap((part) => (typeof part === 'string' ? [] : [part.strong]));
+}
+
 /** Whole seconds, rounded down, as a clock counts; minutes go past 59. */
 test('a duration shows as minutes and seconds', () => {
   assert.equal(formatDuration(0), '0:00');
@@ -37,53 +48,77 @@ test('a duration shows as minutes and seconds', () => {
   assert.equal(formatDuration(3_665_000), '61:05');
 });
 
-/** The exploded mine is 6: row 3, column 1. */
-test('a loss names the mine, then how the flags fared', () => {
-  assert.equal(lossMessage(lostWithFlags([])), 'Mine at row 3, column 1.');
+/** The text a screen reader hears: every part, the bold ones' too, in order. */
+test("a message's text is its parts joined", () => {
+  assert.equal(messageText([]), '');
   assert.equal(
-    lossMessage(lostWithFlags([{ cellIndex: 2, isMine: true }])),
-    'Mine at row 3, column 1. Every flag was right.',
-  );
-  assert.equal(
-    lossMessage(
-      lostWithFlags([
-        { cellIndex: 0, isMine: false },
-        { cellIndex: 2, isMine: true },
-      ]),
-    ),
-    'Mine at row 3, column 1. 1 flag was wrong.',
-  );
-  assert.equal(
-    lossMessage(
-      lostWithFlags([
-        { cellIndex: 0, isMine: false },
-        { cellIndex: 1, isMine: false },
-      ]),
-    ),
-    'Mine at row 3, column 1. 2 flags were wrong.',
+    messageText(['Mine at ', { strong: 'row 3, column 1' }, '.']),
+    'Mine at row 3, column 1.',
   );
 });
 
-/** A tie isn't a new best; a gain under a second shows as such, not as 0:00. */
+/** The exploded mine is 6: row 3, column 1, the part in bold whatever follows. */
+test('a loss names the mine, then how the flags fared', () => {
+  const cases: [{ cellIndex: number; isMine: boolean }[], string][] = [
+    [[], 'Mine at row 3, column 1.'],
+    [[{ cellIndex: 2, isMine: true }], 'Mine at row 3, column 1. Every flag was right.'],
+    [
+      [
+        { cellIndex: 0, isMine: false },
+        { cellIndex: 2, isMine: true },
+      ],
+      'Mine at row 3, column 1. 1 flag was wrong.',
+    ],
+    [
+      [
+        { cellIndex: 0, isMine: false },
+        { cellIndex: 1, isMine: false },
+      ],
+      'Mine at row 3, column 1. 2 flags were wrong.',
+    ],
+  ];
+
+  for (const [flags, text] of cases) {
+    const message = lossMessage(lostWithFlags(flags));
+
+    assert.equal(messageText(message), text);
+    assert.deepEqual(strongParts(message), ['row 3, column 1'], text);
+  }
+});
+
+/**
+ * A tie isn't a new best; a gain under a second shows as such, not as 0:00.
+ * Only the time of the clear is in bold, not the best it's set against.
+ */
 test('a win gives the time against the best', () => {
-  assert.equal(
-    winMessage({ timeMs: 83_000, previousBestMs: null }),
-    'Cleared in 1:23. Your first clear at this level on this device.',
-  );
-  assert.equal(
-    winMessage({ timeMs: 71_000, previousBestMs: 83_000 }),
-    'Cleared in 1:11. A new best, 0:12 faster.',
-  );
-  assert.equal(
-    winMessage({ timeMs: 82_600, previousBestMs: 83_000 }),
-    'Cleared in 1:22. A new best, by under a second.',
-  );
-  assert.equal(
-    winMessage({ timeMs: 83_000, previousBestMs: 83_000 }),
-    'Cleared in 1:23. Best on this device: 1:23.',
-  );
-  assert.equal(
-    winMessage({ timeMs: 90_000, previousBestMs: 65_000 }),
-    'Cleared in 1:30. Best on this device: 1:05.',
-  );
+  const cases: [Parameters<typeof winMessage>[0], string, string][] = [
+    [
+      { timeMs: 83_000, previousBestMs: null },
+      'Cleared in 1:23. First clear at this size on this device.',
+      '1:23',
+    ],
+    [{ timeMs: 71_000, previousBestMs: 83_000 }, 'Cleared in 1:11. New best, 0:12 faster.', '1:11'],
+    [
+      { timeMs: 82_600, previousBestMs: 83_000 },
+      'Cleared in 1:22. New best, by under a second.',
+      '1:22',
+    ],
+    [
+      { timeMs: 83_000, previousBestMs: 83_000 },
+      'Cleared in 1:23. Best on this device: 1:23.',
+      '1:23',
+    ],
+    [
+      { timeMs: 90_000, previousBestMs: 65_000 },
+      'Cleared in 1:30. Best on this device: 1:05.',
+      '1:30',
+    ],
+  ];
+
+  for (const [record, text, time] of cases) {
+    const message = winMessage(record);
+
+    assert.equal(messageText(message), text);
+    assert.deepEqual(strongParts(message), [time], text);
+  }
 });

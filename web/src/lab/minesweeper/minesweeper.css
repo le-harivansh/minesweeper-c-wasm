@@ -1,78 +1,129 @@
 /*
- * The game's styles. Global, not scoped: the cells are made by script, which
- * Astro's scoped styles never reach. Every selector sits under .minesweeper,
- * so nothing leaks onto the page.
+ * The game's styles: the stage and everything on it. Global, not scoped: the
+ * cells are made by script, which Astro's scoped styles never reach. Every
+ * selector sits under .minesweeper, so nothing leaks onto the page.
  *
- * For now one plain stage in the page's own colours; the worlds come later.
+ * The parts read tokens only, never a colour: the stage takes its world's,
+ * which worlds.css sets on it under the page's own names (--ground, --ink,
+ * --muted, --rule) and the game's (--tile-color, --cover-exit, …). The
+ * controls above the stage are controls.css's.
+ *
+ * The look and the motion are the prototype's (tmp/Minesweeper.html in the C
+ * repo), its values as they are. A cell is a floor with a cover over it: the
+ * cover carries the flag and leaves when the cell is revealed, in the world's
+ * own way. The board view says when each cell's motion starts (--reveal-delay,
+ * --show-delay), so a reveal ripples ring by ring and a loss surfaces the
+ * mines nearest the exploded one first.
+ *
+ * Every animation ends where the element's own style already is: what
+ * appears animates from hidden to its style, what leaves has its hidden end
+ * as its style. With motion off (prefers-reduced-motion here, and the site
+ * turns every animation off too), the board shows the same state, at once.
  */
 
+/*
+ * The game's own Plex Mono weights: the site ships 400 and 500. Deep sea's
+ * counter is light (300) and a message's bold is 600, as in the prototype.
+ * The browser fetches each only when something uses it.
+ */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300;
+  src: url('./fonts/ibm-plex-mono-latin-300-normal.woff2?no-inline') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('./fonts/ibm-plex-mono-latin-600-normal.woff2?no-inline') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* The controls lay themselves out by the game's width, not the window's. */
 .minesweeper {
+  container: minesweeper / inline-size;
+  display: grid;
+  gap: 18px;
   color: var(--ink);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 15px;
 }
 
-/* Controls */
-
-.minesweeper__controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.minesweeper__difficulty {
-  display: inline-flex;
-  border: 1px solid var(--ink);
-}
-
-.minesweeper__difficulty button,
-.minesweeper__new-game {
-  padding: 6px 12px;
-  border: 0;
-  background: transparent;
-  color: var(--ink);
-  font: inherit;
-  cursor: pointer;
-}
-
-.minesweeper__difficulty button + button {
-  border-left: 1px solid var(--ink);
-}
-
-.minesweeper__difficulty button[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--ground);
-  cursor: default;
-}
-
-.minesweeper__new-game {
-  border: 1px solid var(--ink);
-}
-
 /*
- * The stage: HUD, board and message, as wide as the board (never less than a
- * HUD needs, never more than the page has).
+ * The stage: HUD, board, message and New game, in its world's colours. A
+ * world's light lies in ::before and its air (ambience.ts) in the layer over
+ * it, both under the parts: what moves in the air passes behind the board
+ * and shows around it.
  */
 
 .minesweeper__stage {
-  width: max-content;
-  min-width: min(100%, 320px);
-  max-width: 100%;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 20px 20px 18px;
+  border-radius: 16px;
+  background: var(--ground);
+  color: var(--ink);
 }
 
+.minesweeper__stage::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.minesweeper__stage > * {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * The air's layer: the stage's size, and a size container, so a particle's
+ * path can be the stage's height or width (100cqh, 100cqw). Each world draws
+ * its own particles (worlds.css).
+ */
+.minesweeper__stage > .minesweeper__ambience {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  container-type: size;
+}
+
+.minesweeper__ambience > * {
+  position: absolute;
+}
+
+/* The HUD: mines left, the status over the progress bar, the time. */
+
 .minesweeper__hud {
+  --hud-number-size: 40px;
+
   display: flex;
-  gap: 8px 20px;
+  flex-wrap: wrap;
+  gap: 18px;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .minesweeper__stat {
   display: grid;
-  gap: 4px;
+  gap: 6px;
   margin: 0;
 }
 
@@ -82,59 +133,100 @@
 
 .minesweeper__label {
   color: var(--muted);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font: 500 11px / 1 var(--font-mono);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
+/* The HUD's numbers are set like the board's, at the world's own weight. */
 .minesweeper__number {
-  font-family: var(--font-sans);
-  font-size: 32px;
+  font-family: var(--number-font);
+  font-size: var(--hud-number-size);
+  font-stretch: var(--number-width);
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  line-height: 1;
+  font-weight: var(--hud-weight);
+  letter-spacing: var(--hud-letter-spacing);
+  line-height: 0.95;
 }
 
 .minesweeper__progress-area {
   display: grid;
   flex: 1;
-  gap: 6px;
-  min-width: 64px;
-  padding-bottom: 4px;
+  gap: 8px;
+  align-self: flex-end;
+  min-width: 140px;
+  max-width: 360px;
+  padding-bottom: 6px;
 }
 
 .minesweeper__progress {
+  overflow: hidden;
   height: 4px;
+  border-radius: 2px;
   background: var(--rule);
 }
 
 .minesweeper__progress::before {
   content: '';
   display: block;
+  width: calc(var(--progress, 0) * 100%);
   height: 100%;
-  background: var(--ink);
-  transform: scaleX(var(--progress, 0));
-  transform-origin: left;
+  background: var(--accent);
+  transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* contain: the message wraps to the stage's width instead of widening it. */
-.minesweeper__message {
-  contain: inline-size;
-  margin: 12px 0 0;
-  color: var(--muted);
+/* On a phone the three keep to one line: smaller numbers, a shorter bar. */
+@media (max-width: 540px) {
+  .minesweeper__hud {
+    --hud-number-size: 32px;
+
+    gap: 12px;
+  }
+
+  .minesweeper__progress-area {
+    min-width: 72px;
+  }
 }
 
-/* Expert is 30 columns, wider than a phone: the board scrolls sideways. */
+/*
+ * The board's area: the cells take the largest size from 26 to 42 px at which
+ * every column fits its width, in whole pixels so the gaps stay even. Expert
+ * on a phone is wider still at 26 px: the area scrolls sideways. Never up and
+ * down: a cover sinking out of the last row would give it a scrollbar for a
+ * moment.
+ */
+.minesweeper__board-area {
+  container-type: inline-size;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  margin: 0 -4px;
+  padding: 4px;
+  scrollbar-width: thin;
+}
+
 .minesweeper__board {
-  --cell-size: 28px;
-  --cell-gap: 2px;
+  --cell-size: clamp(
+    26px,
+    round(
+      down,
+      (100cqi - (var(--columns, 9) - 1) * var(--cell-gap) - 2 * var(--board-padding)) /
+        var(--columns, 9),
+      1px
+    ),
+    42px
+  );
 
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--cell-gap);
-  max-width: 100%;
   width: max-content;
-  overflow-x: auto;
+  margin: 0 auto;
+  padding: var(--board-padding);
+  border-radius: var(--board-radius);
+  outline: 1px solid var(--board-outline-color);
+  background-color: var(--board-color);
   /* Pans and pinch-zooms stay the page's; a double tap no longer zooms. */
   touch-action: manipulation;
   -webkit-user-select: none;
@@ -143,64 +235,422 @@
   -webkit-touch-callout: none;
 }
 
+/* Until the game loads the board has no cells: its edge alone would be a dot. */
+.minesweeper__board[aria-busy='true'] {
+  outline: none;
+}
+
 .minesweeper__row {
   display: flex;
   gap: var(--cell-gap);
 }
 
+/*
+ * A cell is its floor: clear until it's revealed, so the board shows through
+ * the gaps and under a mine a loss shows. Its number is ::before, a mine ::after.
+ */
 .minesweeper__cell {
+  position: relative;
   flex: none;
+  box-sizing: border-box;
   width: var(--cell-size);
   height: var(--cell-size);
+  margin: 0;
   padding: 0;
-  border: 1px solid var(--rule);
-  background: transparent;
+  border: 0;
+  border-radius: var(--cell-radius);
+  background-color: transparent;
   color: var(--ink);
-  font: inherit;
-  font-weight: 500;
+  font-family: var(--number-font);
+  font-size: calc(var(--cell-size) * var(--number-scale));
+  font-stretch: var(--number-width);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--number-weight);
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The cover: the tile over the floor. It carries a flag (::after) and a wrong flag's cross (::before). */
+.minesweeper__cover {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: var(--tile-border);
+  border-radius: var(--cell-radius);
+  background-color: var(--tile-color);
+  pointer-events: none;
+  transform-origin: var(--cover-origin);
+  transition:
+    background-color 0.14s,
+    transform 0.08s,
+    border-color 0.14s;
 }
 
 /*
- * The page's ring would sit outside the cell, in ink, on the ink of the
- * covered cells around it. Inside, in the cell's own colour, it shows on
- * covered and revealed cells alike.
+ * Revealed: the floor fades in as the cover leaves, ring by ring; the number
+ * follows. Each waits for its ring as it starts (fill backwards) and ends on
+ * its own style: a cover that has gone holds no transform, which would reach
+ * past the board and let its area scroll.
  */
-.minesweeper__cell:focus-visible {
-  outline-color: currentColor;
-  outline-offset: -5px;
+
+.minesweeper__cell[data-state='revealed'] {
+  background-color: var(--revealed-color);
+  box-shadow: var(--revealed-shadow);
+  cursor: default;
+  animation: var(--revealed-fade);
+  animation-delay: var(--reveal-delay, 0ms);
+  animation-fill-mode: backwards;
 }
 
-.minesweeper__cell[data-state='hidden'],
-.minesweeper__cell[data-state='flagged'] {
-  background: var(--ink);
-  color: var(--ground);
-  cursor: pointer;
+.minesweeper__cell:is([data-state='revealed'], [data-state='mine']) .minesweeper__cover {
+  opacity: 0;
+  animation: var(--cover-exit) backwards;
 }
 
-/* Once the game is over, no cell takes a click. */
+.minesweeper__cell[data-state='revealed'] .minesweeper__cover {
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+.minesweeper__cell[data-state='mine'] .minesweeper__cover {
+  animation-delay: var(--show-delay, 0ms);
+}
+
+.minesweeper__cell::before {
+  content: attr(data-count);
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.minesweeper__cell[data-state='revealed']::before {
+  animation: number-appear 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--reveal-delay, 0ms) + 0.1s);
+}
+
+.minesweeper__cell[data-count='1'] {
+  color: var(--number-1-color);
+}
+
+.minesweeper__cell[data-count='2'] {
+  color: var(--number-2-color);
+}
+
+.minesweeper__cell[data-count='3'] {
+  color: var(--number-3-color);
+}
+
+.minesweeper__cell[data-count='4'] {
+  color: var(--number-4-color);
+}
+
+.minesweeper__cell[data-count='5'] {
+  color: var(--number-5-color);
+}
+
+.minesweeper__cell[data-count='6'] {
+  color: var(--number-6-color);
+}
+
+.minesweeper__cell[data-count='7'] {
+  color: var(--number-7-color);
+}
+
+.minesweeper__cell[data-count='8'] {
+  color: var(--number-8-color);
+}
+
+/*
+ * Flags: the world's shape as a mask, in its colour. A flag lands with a pop
+ * (scale), then idles in its world's way (transform), each column a little
+ * out of step with the next. A wrong flag stands still under its cross, so
+ * it moves to the cover's ::before: its ::after holds the cross's halo.
+ */
+
+.minesweeper__cell[data-state='flagged'] .minesweeper__cover::after,
+.minesweeper__cell[data-state='wrong-flag'] .minesweeper__cover::before {
+  content: '';
+  position: absolute;
+  inset: var(--flag-inset);
+  background-color: var(--flag-color);
+  mask-image: var(--flag-shape);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  transform-origin: var(--flag-origin);
+}
+
+.minesweeper__cell[data-state='flagged'] .minesweeper__cover::after {
+  animation:
+    flag-land 0.34s cubic-bezier(0.2, 1.5, 0.4, 1) both,
+    var(--flag-idle);
+  animation-delay: 0s, calc(var(--column, 0) * -0.47s);
+}
+
+/*
+ * A wrong flag's cross: drawn over the flag, a little larger and thin, so the
+ * flag still shows between its arms. Its halo, the same shape drawn wider,
+ * lies between the two in a colour of the world's, which sets it off any
+ * flag. Each world crosses out in its own warning colour.
+ */
+
+.minesweeper__cell[data-state='wrong-flag'] .minesweeper__cover::after,
+.minesweeper__cell[data-state='wrong-flag']::after {
+  content: '';
+  position: absolute;
+  inset: 6%;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  pointer-events: none;
+}
+
+.minesweeper__cell[data-state='wrong-flag'] .minesweeper__cover::after {
+  background-color: var(--wrong-flag-halo-color);
+  mask-image: url('./glyphs/cross-halo.svg?no-inline');
+}
+
+.minesweeper__cell[data-state='wrong-flag']::after {
+  background-color: var(--wrong-flag-color);
+  mask-image: url('./glyphs/cross.svg?no-inline');
+}
+
+/*
+ * Mines, once a loss shows them: each surfaces as its cover leaves, a sonar
+ * ring goes out from it, then it breathes. The one that went off has no
+ * cover, rings twice and breathes harder.
+ */
+
+.minesweeper__cell:is([data-state='mine'], [data-state='exploded'])::after {
+  content: '';
+  position: absolute;
+  inset: 24%;
+  background-color: var(--mine-color);
+  mask-image: var(--mine-shape);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  pointer-events: none;
+}
+
+.minesweeper__cell[data-state='mine']::after {
+  animation:
+    mine-appear 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    mine-breathe 2.8s ease-in-out infinite;
+  animation-delay: var(--show-delay, 0ms), calc(var(--show-delay, 0ms) + 0.6s);
+}
+
+/* The sonar ring: a circle the size of the mine, its ring a shadow that spreads. */
+.minesweeper__cell:is([data-state='mine'], [data-state='exploded'])::before {
+  content: '';
+  inset: 24%;
+  border-radius: 50%;
+}
+
+.minesweeper__cell[data-state='mine']::before {
+  animation: sonar 1.3s ease-out both;
+  animation-delay: calc(var(--show-delay, 0ms) + 0.1s);
+}
+
+.minesweeper__cell[data-state='exploded'] {
+  background-color: var(--exploded-color);
+}
+
+.minesweeper__cell[data-state='exploded'] .minesweeper__cover {
+  display: none;
+}
+
+.minesweeper__cell[data-state='exploded']::after {
+  background-color: var(--exploded-mine-color);
+  animation:
+    mine-appear 0.3s both,
+    exploded-breathe 1.6s ease-in-out infinite;
+  animation-delay: 0s, 0.4s;
+}
+
+.minesweeper__cell[data-state='exploded']::before {
+  animation:
+    sonar 1.6s ease-out both,
+    sonar 1.6s ease-out both;
+  animation-delay: 0.1s, 1.3s;
+}
+
+/* A win: the cleared floor waves from left to right, and the board blooms. */
+
+.minesweeper__board[data-status='won'] {
+  animation: board-bloom 1.8s ease-out both;
+}
+
+.minesweeper__board[data-status='won'] .minesweeper__cell[data-state='revealed'] {
+  animation: cell-wave 0.7s ease both;
+  animation-delay: calc(var(--column, 0) * 22ms);
+}
+
+/*
+ * The pointer: a covered cell lightens under it and sinks when pressed, while
+ * the game takes clicks; the cover a click just sent off leaves lit. Hover
+ * only where there is one: a touch screen keeps the last tapped cell hovered.
+ * A number under the mouse marks its hidden neighbors (the board view sets
+ * data-highlighted).
+ */
+
+@media (hover: hover) {
+  .minesweeper__board:not([data-status='won'], [data-status='lost'])
+    .minesweeper__cell:hover
+    .minesweeper__cover {
+    background-color: var(--tile-hover-color);
+  }
+}
+
+.minesweeper__cell[data-highlighted] .minesweeper__cover {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background-color: var(--tile-hover-color);
+}
+
+.minesweeper__board:not([data-status='won'], [data-status='lost'])
+  .minesweeper__cell:is([data-state='hidden'], [data-state='flagged']):active
+  .minesweeper__cover {
+  background-color: var(--tile-pressed-color);
+  transform: scale(0.95);
+}
+
 .minesweeper__board:is([data-status='won'], [data-status='lost']) .minesweeper__cell {
   cursor: default;
 }
 
-.minesweeper__cell[data-state='exploded'] {
-  background: var(--muted);
-  color: var(--ground);
+/*
+ * The keyboard's cursor: the prototype's ring in the accent, on the cell and
+ * its cover, with the ground inside it so it shows on any floor (dune's
+ * indigo alone vanishes on its umber). The board is ringed while it has the
+ * focus, close enough that its area doesn't clip the ring.
+ */
+
+.minesweeper__cell:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 2px var(--accent),
+    inset 0 0 0 3px var(--ground);
 }
 
-/* What a cell shows: the view writes its state and number, this draws them. */
-.minesweeper__cell[data-count]::after {
-  content: attr(data-count);
+.minesweeper__cell:focus-visible .minesweeper__cover {
+  box-shadow:
+    inset 0 0 0 2px var(--accent),
+    inset 0 0 0 3px var(--ground);
 }
 
-.minesweeper__cell[data-state='flagged']::after {
-  content: '⚑';
+.minesweeper__board:has(.minesweeper__cell:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-.minesweeper__cell[data-state='exploded']::after,
-.minesweeper__cell[data-state='mine']::after {
-  content: '✸';
+/* Under the board: the message, and New game once there's a game to leave. */
+
+.minesweeper__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
 }
 
-.minesweeper__cell[data-state='wrong-flag']::after {
-  content: '✕';
+/*
+ * The message takes the room New game leaves it: one line where that's
+ * enough, and lines of even length where it isn't, which breaks the ready
+ * message between its two sentences. Where the room is narrower than the
+ * longer of them (45 characters), New game goes under it instead. (The
+ * prototype held it to 62 characters, so the ready message, 89, always broke
+ * mid-sentence.)
+ */
+.minesweeper__message {
+  flex: 1 1 45ch;
+  margin: 0;
+  color: var(--muted);
+  font: 13px / 1.45 var(--font-mono);
+  text-wrap: balance;
+}
+
+/* Where the mine was, how long a clear took. */
+.minesweeper__message b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* The motion every world shares; each world's own is in worlds.css. */
+
+@keyframes number-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+}
+
+@keyframes mine-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+@keyframes mine-breathe {
+  50% {
+    opacity: 0.78;
+    scale: 1.1;
+  }
+}
+
+@keyframes exploded-breathe {
+  50% {
+    opacity: 0.7;
+    scale: 1.18;
+  }
+}
+
+@keyframes flag-land {
+  from {
+    opacity: 0;
+    scale: 0.3;
+  }
+}
+
+@keyframes sonar {
+  from {
+    box-shadow: 0 0 0 1px var(--ring-color);
+  }
+
+  to {
+    box-shadow: 0 0 0 16px transparent;
+  }
+}
+
+@keyframes floor-fade {
+  from {
+    background-color: transparent;
+  }
+}
+
+@keyframes cell-wave {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes board-bloom {
+  20% {
+    box-shadow:
+      0 0 0 3px var(--glow-color),
+      0 0 52px 10px var(--glow-color);
+  }
+}
+
+/* Motion off: every part is already drawn as it ends. */
+@media (prefers-reduced-motion: reduce) {
+  .minesweeper *,
+  .minesweeper *::before,
+  .minesweeper *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }

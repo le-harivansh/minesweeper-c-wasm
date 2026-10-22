@@ -1,6 +1,6 @@
 /**
- * Tests web/src/lab/minesweeper/preferences.ts: the difficulty and best times
- * kept between visits, over a fake storage, including storage that is
+ * Tests web/src/lab/minesweeper/preferences.ts: the difficulty, the world,
+ * sound and the best times kept between visits, over a fake storage, including storage that is
  * missing, refuses every call, or holds something it shouldn't.
  *
  * Run with `make test-wasm`. Node runs this file as it is, by stripping the
@@ -41,10 +41,12 @@ const REFUSING_STORAGE: PreferenceStorage = {
   },
 };
 
-test('a first visit starts at Beginner with no best times', () => {
+test('a first visit starts at Beginner, in deep sea, silent, with no best times', () => {
   const preferences = loadPreferences(fakeStorage());
 
   assert.equal(preferences.difficulty, 'beginner');
+  assert.equal(preferences.world, 'deep-sea');
+  assert.equal(preferences.sound, false);
   assert.deepEqual(preferences.recordWin('beginner', 5_000), {
     timeMs: 5_000,
     previousBestMs: null,
@@ -55,17 +57,22 @@ test('a first visit starts at Beginner with no best times', () => {
  * Each loadPreferences over the same storage is the next visit. Each change
  * is saved as it's made, on its own: a difficulty with no win after it too.
  */
-test('the difficulty and best times come back on the next visit', () => {
+test('the difficulty, world, sound and best times come back on the next visit', () => {
   const storage = fakeStorage();
 
   loadPreferences(storage).setDifficulty('expert');
+  loadPreferences(storage).setWorld('dune');
+  loadPreferences(storage).setSound(true);
 
   assert.equal(loadPreferences(storage).difficulty, 'expert');
+  assert.equal(loadPreferences(storage).world, 'dune');
 
   loadPreferences(storage).recordWin('intermediate', 90_000);
   const nextVisit = loadPreferences(storage);
 
   assert.equal(nextVisit.difficulty, 'expert');
+  assert.equal(nextVisit.world, 'dune');
+  assert.equal(nextVisit.sound, true);
   assert.equal(nextVisit.recordWin('intermediate', 100_000).previousBestMs, 90_000);
 });
 
@@ -98,6 +105,8 @@ test('what was stored wrongly is ignored', () => {
     fakeStorage(
       JSON.stringify({
         difficulty: 'legendary',
+        world: 'moon',
+        sound: 'loud',
         bestTimesMs: { beginner: -5, intermediate: 42_000, expert: 'fast', custom: 10 },
       }),
     ),
@@ -105,6 +114,9 @@ test('what was stored wrongly is ignored', () => {
 
   assert.equal(garbled.difficulty, 'beginner');
   assert.equal(mixed.difficulty, 'beginner');
+  assert.equal(mixed.world, 'deep-sea');
+  assert.equal(mixed.sound, false);
+  assert.equal(loadPreferences(fakeStorage('{"world": 42}')).world, 'deep-sea');
   assert.equal(mixed.recordWin('beginner', 1_000).previousBestMs, null);
   assert.equal(mixed.recordWin('intermediate', 50_000).previousBestMs, 42_000);
   assert.equal(mixed.recordWin('expert', 1_000).previousBestMs, null);
@@ -115,9 +127,13 @@ test('without working storage, preferences last for the visit', () => {
   for (const storage of [null, REFUSING_STORAGE]) {
     const preferences = loadPreferences(storage);
     preferences.setDifficulty('intermediate');
+    preferences.setWorld('rainforest');
+    preferences.setSound(true);
     preferences.recordWin('intermediate', 30_000);
 
     assert.equal(preferences.difficulty, 'intermediate');
+    assert.equal(preferences.world, 'rainforest');
+    assert.equal(preferences.sound, true);
     assert.equal(preferences.recordWin('intermediate', 40_000).previousBestMs, 30_000);
   }
 });

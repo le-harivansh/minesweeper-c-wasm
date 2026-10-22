@@ -12,12 +12,34 @@
  * Home and End move between cells, as a grid's keys do. Game keys (flag,
  * reveal) are input's, not the view's.
  *
- * cellLabel() and cellAfterKey() are pure and tested in Node; the rest needs
- * a page.
+ * Each cell holds its cover, the tile the CSS takes away when the cell is
+ * revealed. The motion is CSS; the view only says when each cell's part of
+ * it starts: a reveal ripples out ring by ring from the click, and a loss
+ * shows the other mines nearest the exploded one first. The timings are the
+ * prototype's (tmp/Minesweeper.html in the C repo).
+ *
+ * Hovering a revealed number with a mouse marks its hidden neighbors, to
+ * help count them.
+ *
+ * cellLabel(), cellAfterKey(), revealDelayMs(), showDelayMs() and
+ * neighborIndexes() are pure and tested in Node; the rest needs a page.
  */
 import { findPart } from './find-part.ts';
 import type { GameEvent } from './game-core.ts';
 import type { Board, CellState } from './game-session.ts';
+import { createStarField } from './star-field.ts';
+
+/** The time between one ring of a cascade and the next. */
+export const RIPPLE_STEP_MS = 32;
+
+/** Rings past this one go with it: a long cascade's last ring starts within half a second. */
+export const LAST_RIPPLE_RING = 14;
+
+/** When the first of the other mines surfaces after a loss. */
+export const MINE_SHOWN_START_MS = 140;
+
+/** The wait for each ring of cells further out from the exploded mine. */
+export const MINE_SHOWN_STEP_MS = 55;
 
 /** What a screen reader says for each state, except a revealed cell's number. */
 const STATE_LABELS: Record<Exclude<CellState, 'revealed'>, string> = {
@@ -86,14 +108,63 @@ export function cellAfterKey(
   }
 }
 
+/** When a revealed cell's cover starts to go: its ring's turn in the ripple. */
+export function revealDelayMs(ring: number): number {
+  return Math.min(ring, LAST_RIPPLE_RING) * RIPPLE_STEP_MS;
+}
+
+/**
+ * When a mine that a loss shows surfaces: nearest the exploded one first,
+ * by how many rows or columns apart they are, whichever is more (the rings
+ * of cells around the exploded mine).
+ */
+export function showDelayMs(cellIndex: number, explodedIndex: number, columns: number): number {
+  const rowsApart = Math.abs(Math.floor(cellIndex / columns) - Math.floor(explodedIndex / columns));
+  const columnsApart = Math.abs((cellIndex % columns) - (explodedIndex % columns));
+
+  return MINE_SHOWN_START_MS + Math.max(rowsApart, columnsApart) * MINE_SHOWN_STEP_MS;
+}
+
+/** The cells around `cellIndex`, without it, in reading order: three to eight. */
+export function neighborIndexes(
+  cellIndex: number,
+  { rows, columns }: Pick<Board, 'rows' | 'columns'>,
+): number[] {
+  const row = Math.floor(cellIndex / columns);
+  const column = cellIndex % columns;
+  const neighbors: number[] = [];
+
+  for (let neighborRow = row - 1; neighborRow <= row + 1; neighborRow++) {
+    for (let neighborColumn = column - 1; neighborColumn <= column + 1; neighborColumn++) {
+      const onBoard =
+        neighborRow >= 0 && neighborRow < rows && neighborColumn >= 0 && neighborColumn < columns;
+
+      if (onBoard && (neighborRow !== row || neighborColumn !== column)) {
+        neighbors.push(neighborRow * columns + neighborColumn);
+      }
+    }
+  }
+
+  return neighbors;
+}
+
 export interface BoardView {
   /**
    * Shows a move the session has applied: `board` is the session's board
    * after it. A new game builds the cells when the board's size changed and
-   * repaints them all; any other move repaints only the cells it names. The
-   * grid's data-status follows the game's, for the CSS.
+   * repaints them all; any other move repaints only the cells it names, and
+   * times their motion. The grid's data-status follows the game's, for the
+   * CSS.
    */
   showMove(move: readonly GameEvent[], board: Board): void;
+  /** Puts the focus on the cell in the tab order, without scrolling the page. */
+  focus(): void;
+}
+
+/** The cell an event happened on, if any. */
+function cellIndexOf(target: EventTarget | null): number | null {
+  const cell = target instanceof Element ? target.closest<HTMLElement>('[data-cell-index]') : null;
+  return cell ? Number(cell.dataset.cellIndex) : null;
 }
 
 /** Shows the board in the grid of the game's markup under `root`. */
@@ -104,6 +175,16 @@ export function createBoardView(root: HTMLElement): BoardView {
   let cells: HTMLButtonElement[] = [];
   // The cell in the tab order.
   let focusableIndex = 0;
+  // The board last shown, for the hover.
+  let shownBoard: Board | null = null;
+  // The revealed number under the mouse, and the neighbors it marks.
+  let hoveredIndex: number | null = null;
+  let highlighted: number[] = [];
+
+  // The night sky's stars: worlds.css draws them, in that world only.
+  const stars = createStarField();
+  grid.style.setProperty('--star-field', stars.fixed);
+  grid.style.setProperty('--twinkling-stars', stars.twinkling);
 
   function createCell(cellIndex: number): HTMLButtonElement {
     const cell = document.createElement('button');
@@ -112,6 +193,15 @@ export function createBoardView(root: HTMLElement): BoardView {
     cell.setAttribute('role', 'gridcell');
     cell.dataset.cellIndex = String(cellIndex);
     cell.tabIndex = cellIndex === focusableIndex ? 0 : -1;
+    // The column sets a flag's place in its idle motion and a cell's in the
+    // win's wave.
+    cell.style.setProperty('--column', String(cellIndex % columns));
+
+    // The tile over the cell: it carries the flag, and goes when the cell is
+    // revealed.
+    const cover = document.createElement('span');
+    cover.className = 'minesweeper__cover';
+    cell.append(cover);
     return cell;
   }
 
@@ -121,8 +211,12 @@ export function createBoardView(root: HTMLElement): BoardView {
     rows = board.rows;
     columns = board.columns;
     focusableIndex = 0;
+    hoveredIndex = null;
+    highlighted = [];
     cells = board.cells.map((_, cellIndex) => createCell(cellIndex));
 
+    // The CSS sizes the cells to the width from the number of columns.
+    grid.style.setProperty('--columns', String(columns));
     grid.replaceChildren(
       ...Array.from({ length: rows }, (_, row) => {
         const rowElement = document.createElement('div');
@@ -178,8 +272,57 @@ export function createBoardView(root: HTMLElement): BoardView {
     cells[next].focus();
   });
 
+  /**
+   * Marks the hidden neighbors of the number under the mouse, while the game
+   * takes clicks. Flagged neighbors aren't marked: they are counted already.
+   */
+  function showHighlight(): void {
+    for (const cellIndex of highlighted) {
+      delete cells[cellIndex].dataset.highlighted;
+    }
+
+    highlighted = [];
+    const board = shownBoard;
+    const hovered = hoveredIndex === null ? undefined : board?.cells[hoveredIndex];
+
+    if (
+      !board ||
+      hoveredIndex === null ||
+      hovered?.state !== 'revealed' ||
+      hovered.neighborMineCount === 0 ||
+      board.status === 'won' ||
+      board.status === 'lost'
+    ) {
+      return;
+    }
+
+    highlighted = neighborIndexes(hoveredIndex, board).filter(
+      (cellIndex) => board.cells[cellIndex].state === 'hidden',
+    );
+
+    for (const cellIndex of highlighted) {
+      cells[cellIndex].dataset.highlighted = '';
+    }
+  }
+
+  // A finger has no hover: a touch only reveals or flags.
+  grid.addEventListener('pointerover', (event) => {
+    if (event.pointerType !== 'touch') {
+      hoveredIndex = cellIndexOf(event.target);
+      showHighlight();
+    }
+  });
+
+  grid.addEventListener('pointerleave', () => {
+    hoveredIndex = null;
+    showHighlight();
+  });
+
   return {
     showMove(move, board) {
+      // The exploded mine comes first in a loss; the others surface around it.
+      let explodedIndex: number | null = null;
+
       for (const event of move) {
         if (event.type === 'gameCreated') {
           if (board.rows !== rows || board.columns !== columns) {
@@ -188,11 +331,31 @@ export function createBoardView(root: HTMLElement): BoardView {
 
           board.cells.forEach((_, cellIndex) => paintCell(board, cellIndex));
         } else if ('cellIndex' in event) {
+          const { style } = cells[event.cellIndex];
+
+          if (event.type === 'cellRevealed') {
+            style.setProperty('--reveal-delay', `${revealDelayMs(event.ring)}ms`);
+          } else if (event.type === 'mineExploded') {
+            explodedIndex = event.cellIndex;
+          } else if (event.type === 'mineShown' && explodedIndex !== null) {
+            style.setProperty(
+              '--show-delay',
+              `${showDelayMs(event.cellIndex, explodedIndex, columns)}ms`,
+            );
+          }
+
           paintCell(board, event.cellIndex);
         }
       }
 
       grid.dataset.status = board.status;
+      // What's under the mouse may have changed: a neighbor flagged, the
+      // game over.
+      shownBoard = board;
+      showHighlight();
+    },
+    focus() {
+      cells[focusableIndex]?.focus({ preventScroll: true });
     },
   };
 }

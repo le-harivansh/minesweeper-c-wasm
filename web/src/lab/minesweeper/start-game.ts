@@ -8,7 +8,8 @@
  *
  * The session is the one copy of the game; the views only read its board.
  * This file holds what belongs to none of them: which difficulty is in
- * play, and recording a win's time.
+ * play, and recording a win's time. The world isn't the game's: main.ts runs
+ * it (worlds.ts).
  */
 import { createBoardView } from './board-view.ts';
 import { createControls } from './controls.ts';
@@ -16,15 +17,19 @@ import { DIFFICULTY, loadGameCore, type DifficultyName } from './game-core.ts';
 import { createGameSession } from './game-session.ts';
 import { createHud } from './hud.ts';
 import { attachInput } from './input.ts';
-import { loadPreferences } from './preferences.ts';
+import type { Preferences } from './preferences.ts';
 
 /**
  * @param wasm The module's response; main.ts starts the download before this
  *   file has loaded.
+ * @param preferences The page's one copy, which main.ts has loaded already.
  */
-export async function startGame(root: HTMLElement, wasm: Promise<Response>): Promise<void> {
+export async function startGame(
+  root: HTMLElement,
+  wasm: Promise<Response>,
+  preferences: Preferences,
+): Promise<void> {
   const core = await loadGameCore(wasm);
-  const preferences = loadPreferences(browserStorage());
   let difficulty = preferences.difficulty;
 
   // The session calls onMove only after a command, and the first command
@@ -49,7 +54,12 @@ export async function startGame(root: HTMLElement, wasm: Promise<Response>): Pro
         newGame(chosen);
       }
     },
-    onNewGame: () => newGame(difficulty),
+    onNewGame: () => {
+      newGame(difficulty);
+      // New game hides until the first reveal, which would leave the
+      // keyboard nowhere: it goes on from the board, where the next move is.
+      boardView.focus();
+    },
   });
 
   attachInput(root, session);
@@ -62,13 +72,4 @@ export async function startGame(root: HTMLElement, wasm: Promise<Response>): Pro
   }
 
   newGame(difficulty);
-}
-
-/** localStorage, or null where the browser refuses it (reading it can throw). */
-function browserStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
 }

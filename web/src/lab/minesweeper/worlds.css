@@ -1,0 +1,790 @@
+/*
+ * The worlds: how the stage looks, as the prototype (tmp/Minesweeper.html in
+ * the C repo) draws its four, every value as it is there.
+ *
+ * One block of tokens per world, set on the stage and on the world's own
+ * button in the World picker, which wears its world's colours. Each block
+ * sets every token the parts read and nothing else (web/tests/worlds.test.ts
+ * checks each against what minesweeper.css and controls.css read). A world
+ * sets the page's own names too (--ground, --ink, --muted, --rule), so the
+ * HUD, the message and New game take its colours as they are. The lengths
+ * the board's size is worked out from (--cell-gap, --board-padding) keep
+ * their unit at zero: calc() takes no bare 0 for a length.
+ *
+ * After each block come the world's extras, what isn't a token and belongs to
+ * its stage alone: the stage's light, its air (the particles ambience.ts adds
+ * to the stage's ambience layer, each with its own numbers in custom
+ * properties), the board's texture, the grain of the revealed floor, the type
+ * of the HUD and of New game. The worlds' keyframes close the file. With
+ * motion off every layer stands still, and is drawn to look right so: the
+ * light at rest, the air empty (ambience.ts adds nothing).
+ *
+ * Every glyph is imported with ?no-inline: Vite would inline a small file as
+ * a data: URL, which the site's Content-Security-Policy (img-src 'self')
+ * refuses, and the flag or mine would not show.
+ */
+
+/* ---------- Deep sea: a bathymetric chart ---------- */
+
+:is(.minesweeper__stage, .minesweeper__world)[data-world='deep-sea'] {
+  --ground: #071e2f;
+  --ink: #d6eef5;
+  --muted: rgba(214, 238, 245, 0.55);
+  --rule: rgba(214, 238, 245, 0.14);
+
+  --accent: #58e6d9;
+  --ring-color: rgba(255, 92, 122, 0.7);
+  --glow-color: rgba(88, 230, 217, 0.45);
+
+  --board-color: #0a2a42;
+  --board-radius: 4px;
+  --board-padding: 0px;
+  --board-outline-color: rgba(88, 230, 217, 0.22);
+
+  --tile-color: rgba(14, 66, 98, 0.78);
+  --tile-hover-color: rgba(22, 92, 132, 0.85);
+  --tile-pressed-color: rgba(9, 44, 66, 0.95);
+  --tile-border: 1px solid rgba(88, 230, 217, 0.12);
+  --revealed-color: #04131f;
+  --revealed-shadow: inset 0 0 0 1px rgba(88, 230, 217, 0.08);
+  --revealed-fade: floor-fade 0.36s ease-out;
+  --cell-radius: 2px;
+  --cell-gap: 1px;
+
+  --number-1-color: #58e6d9;
+  --number-2-color: #7cf2a6;
+  --number-3-color: #ffd166;
+  --number-4-color: #b8a1ff;
+  --number-5-color: #ff8e72;
+  --number-6-color: #4ad0ff;
+  --number-7-color: #f5f7fa;
+  --number-8-color: #ff5c7a;
+  --number-font: var(--font-mono);
+  --number-weight: 500;
+  --number-width: 100%;
+  --number-scale: 0.5;
+  --hud-weight: 300;
+  --hud-letter-spacing: -0.03em;
+
+  --flag-color: #ff9f43;
+  --flag-shape: url('./glyphs/buoy.svg?no-inline');
+  --flag-inset: 16%;
+  --flag-origin: 50% 60%;
+  --flag-idle: flag-bob 3.2s ease-in-out infinite alternate;
+  --mine-color: #ff5c7a;
+  --mine-shape: url('./glyphs/sea-mine.svg?no-inline');
+  --exploded-color: #ff3d5a;
+  --exploded-mine-color: #ffffff;
+  /* Crossed out in chart magenta: nautical charts print their hazards in it. */
+  --wrong-flag-color: #ff4fd8;
+  --wrong-flag-halo-color: #04131f;
+  --cover-exit: cover-sink 0.36s cubic-bezier(0.4, 0, 0.6, 1);
+  --cover-origin: 50% 50%;
+
+  --button-radius: 3px;
+  /* The water, as its tiles show it: on a button the ground reads as the night sky's. */
+  --picker-color: #0d3d5b;
+}
+
+.minesweeper__stage[data-world='deep-sea'] {
+  background: linear-gradient(180deg, #0b2c44 0%, #071e2f 45%, #040f19 100%);
+}
+
+/* Caustic light on the water, drifting. */
+.minesweeper__stage[data-world='deep-sea']::before {
+  background:
+    radial-gradient(42% 32% at 18% 18%, rgba(88, 230, 217, 0.08), transparent 70%),
+    radial-gradient(36% 30% at 78% 62%, rgba(88, 230, 217, 0.06), transparent 70%);
+  animation: caustics-drift 30s ease-in-out infinite alternate;
+}
+
+/*
+ * Bubbles rising from under the stage to over it, swaying: clear rings with a
+ * glint, faded in at the stage's foot and out at its surface. The prototype's
+ * four, 26 seconds apart, lay under the board, which hid them: here they're
+ * many, each its own size and speed (ambience.ts).
+ */
+.minesweeper__stage[data-world='deep-sea'] .minesweeper__ambience {
+  mask-image: linear-gradient(to bottom, transparent, #000 8%, #000 90%, transparent);
+}
+
+.minesweeper__stage[data-world='deep-sea'] .minesweeper__bubble {
+  top: 100%;
+  left: var(--x);
+  width: var(--size);
+  height: var(--size);
+  margin-left: calc(var(--size) / -2);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.75) 0 12%, transparent 32%),
+    rgba(214, 238, 245, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(214, 238, 245, 0.8);
+  opacity: var(--opacity);
+  animation:
+    bubble-rise var(--duration) linear var(--delay) both,
+    bubble-sway var(--sway-duration) ease-in-out var(--delay) infinite alternate;
+}
+
+/* Depth contours under the water (the tiles are slightly clear). */
+.minesweeper__stage[data-world='deep-sea'] .minesweeper__board {
+  background-image:
+    repeating-radial-gradient(
+      circle at 22% 70%,
+      transparent 0 14px,
+      rgba(88, 230, 217, 0.22) 14px 15px
+    ),
+    repeating-radial-gradient(
+      circle at 76% 18%,
+      transparent 0 19px,
+      rgba(88, 230, 217, 0.17) 19px 20px
+    ),
+    repeating-radial-gradient(
+      circle at 50% 100%,
+      transparent 0 26px,
+      rgba(88, 230, 217, 0.12) 26px 27px
+    );
+}
+
+/* Soundings where you've cleared. */
+.minesweeper__stage[data-world='deep-sea'] .minesweeper__cell[data-state='revealed'] {
+  background-image: radial-gradient(rgba(88, 230, 217, 0.3) 0.6px, transparent 1.1px);
+  background-size: 6px 6px;
+}
+
+.minesweeper__stage[data-world='deep-sea'] .minesweeper__progress::before {
+  box-shadow: 0 0 10px rgba(88, 230, 217, 0.5);
+}
+
+/* ---------- Night sky: cloud over a star field ---------- */
+
+:is(.minesweeper__stage, .minesweeper__world)[data-world='night-sky'] {
+  --ground: #0a0d1c;
+  --ink: #e9ecfa;
+  --muted: rgba(233, 236, 250, 0.5);
+  --rule: rgba(233, 236, 250, 0.14);
+
+  --accent: #ffd27a;
+  --ring-color: rgba(255, 179, 107, 0.7);
+  --glow-color: rgba(255, 210, 122, 0.4);
+
+  --board-color: #0b1024;
+  --board-radius: 0;
+  --board-padding: 0px;
+  --board-outline-color: rgba(255, 255, 255, 0.08);
+
+  --tile-color: rgba(23, 28, 54, 0.92);
+  --tile-hover-color: rgba(34, 40, 74, 0.94);
+  --tile-pressed-color: rgba(15, 18, 38, 0.98);
+  --tile-border: 1px solid rgba(10, 13, 28, 0.9);
+  --revealed-color: transparent;
+  --revealed-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+  --revealed-fade: none;
+  --cell-radius: 0;
+  --cell-gap: 0px;
+
+  /* The stellar sequence, hot to cool: blue-white 1 to red 7. */
+  --number-1-color: #6fa0ff;
+  --number-2-color: #b8e1ff;
+  --number-3-color: #fff2c4;
+  --number-4-color: #ffd27a;
+  --number-5-color: #ffa75a;
+  --number-6-color: #ff6f5e;
+  --number-7-color: #ff4d4d;
+  --number-8-color: #ff6ad5;
+  --number-font: var(--font-sans);
+  --number-weight: 500;
+  --number-width: 110%;
+  --number-scale: 0.56;
+  --hud-weight: 300;
+  --hud-letter-spacing: 0.02em;
+
+  --flag-color: #ffd27a;
+  --flag-shape: url('./glyphs/star.svg?no-inline');
+  --flag-inset: 20%;
+  --flag-origin: 50% 50%;
+  --flag-idle: flag-twinkle 2.6s ease-in-out infinite alternate;
+  --mine-color: #ffb36b;
+  --mine-shape: url('./glyphs/black-hole.svg?no-inline');
+  --exploded-color: #ff5a3c;
+  --exploded-mine-color: #ffffff;
+  /* Crossed out in beacon red, an aircraft-warning light's at night. */
+  --wrong-flag-color: #ff3b4f;
+  --wrong-flag-halo-color: #0a0d1c;
+  --cover-exit: cover-part 0.4s ease-out;
+  --cover-origin: 50% 50%;
+
+  --button-radius: 999px;
+  --picker-color: #0a0d1c;
+}
+
+.minesweeper__stage[data-world='night-sky'] {
+  background: radial-gradient(110% 70% at 50% 0%, #141a3c 0%, #0a0d1c 60%);
+}
+
+/*
+ * A shooting star: a point at (--x, --y), turned the way it falls, that flies
+ * --dx, --dy and fades. Its tail trails behind it and grows as it gathers
+ * speed. The prototype's one, every 19 seconds from one place, mostly flew
+ * under the board: ambience.ts picks each one's flight where it shows.
+ */
+.minesweeper__stage[data-world='night-sky'] .minesweeper__meteor {
+  top: var(--y);
+  left: var(--x);
+  width: 0;
+  height: 0;
+  rotate: var(--angle);
+  opacity: 0;
+  animation: meteor-fly var(--duration) linear both;
+}
+
+.minesweeper__stage[data-world='night-sky'] .minesweeper__meteor::before,
+.minesweeper__stage[data-world='night-sky'] .minesweeper__meteor::after {
+  content: '';
+  position: absolute;
+}
+
+/* The tail. */
+.minesweeper__stage[data-world='night-sky'] .minesweeper__meteor::before {
+  top: -1px;
+  right: 0;
+  width: var(--length);
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(184, 225, 255, 0.35) 55%,
+    rgba(255, 255, 255, 0.95)
+  );
+  transform-origin: 100% 50%;
+  animation: meteor-tail var(--duration) ease-out both;
+}
+
+/* The head: a point of light. */
+.minesweeper__stage[data-world='night-sky'] .minesweeper__meteor::after {
+  top: -1.5px;
+  right: -1.5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px 2px rgba(184, 225, 255, 0.6);
+}
+
+/*
+ * Stars, seen where the cloud has parted (revealed cells are clear). The board
+ * view sets the sky on the board (star-field.ts): the stars that stay, and the
+ * brighter ones that twinkle over them.
+ */
+.minesweeper__stage[data-world='night-sky'] .minesweeper__board {
+  background-image: var(--star-field);
+}
+
+.minesweeper__stage[data-world='night-sky'] .minesweeper__board::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--twinkling-stars);
+  animation: stars-twinkle 4.6s ease-in-out infinite alternate;
+}
+
+.minesweeper__stage[data-world='night-sky'] .minesweeper__label {
+  letter-spacing: 0.2em;
+}
+
+.minesweeper__stage[data-world='night-sky'] .minesweeper__new-game {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Dune: lit sand above, the umber shadow face where you clear ---------- */
+
+:is(.minesweeper__stage, .minesweeper__world)[data-world='dune'] {
+  --ground: #d9b778;
+  --ink: #3b2814;
+  --muted: rgba(59, 40, 20, 0.6);
+  --rule: rgba(59, 40, 20, 0.16);
+
+  --accent: #2b3a8f;
+  --ring-color: rgba(194, 80, 42, 0.55);
+  --glow-color: rgba(255, 236, 190, 0.75);
+
+  --board-color: #ddbc7e;
+  --board-radius: 0;
+  --board-padding: 0px;
+  --board-outline-color: rgba(59, 40, 20, 0.28);
+
+  --tile-color: rgba(255, 245, 220, 0.1);
+  --tile-hover-color: rgba(255, 245, 220, 0.34);
+  --tile-pressed-color: rgba(59, 40, 20, 0.14);
+  --tile-border: 1px solid rgba(59, 40, 20, 0.13);
+  --revealed-color: #4a3220;
+  --revealed-shadow: none;
+  --revealed-fade: floor-fade 0.36s ease-out;
+  --cell-radius: 0;
+  --cell-gap: 0px;
+
+  --number-1-color: #f1ddb0;
+  --number-2-color: #e8b86a;
+  --number-3-color: #e07a4a;
+  --number-4-color: #b9a9e8;
+  --number-5-color: #e25a4a;
+  --number-6-color: #8fc9c0;
+  --number-7-color: #ffffff;
+  --number-8-color: #ff9c8a;
+  --number-font: var(--font-sans);
+  --number-weight: 600;
+  --number-width: 75%;
+  --number-scale: 0.6;
+  --hud-weight: 300;
+  --hud-letter-spacing: 0;
+
+  --flag-color: #2b3a8f;
+  --flag-shape: url('./glyphs/pennant.svg?no-inline');
+  --flag-inset: 14%;
+  --flag-origin: 28% 100%;
+  --flag-idle: flag-lean 1.4s ease-in-out infinite alternate;
+  --mine-color: #3b2814;
+  --mine-shape: url('./glyphs/burr.svg?no-inline');
+  --exploded-color: #c2502a;
+  --exploded-mine-color: #f1ddb0;
+  /* Crossed out in a desert sign's red on sun-bleached white: the one light halo. */
+  --wrong-flag-color: #b3261e;
+  --wrong-flag-halo-color: #f6e9cc;
+  --cover-exit: cover-blow 0.36s cubic-bezier(0.55, 0, 0.8, 0.6);
+  --cover-origin: 0% 100%;
+
+  --button-radius: 2px;
+  --picker-color: #d9b778;
+}
+
+/* Wind ripples in the sand (the tiles are nearly clear), drifting a few pixels a second. */
+.minesweeper__stage[data-world='dune'] .minesweeper__board {
+  background-image:
+    repeating-linear-gradient(112deg, transparent 0 6px, rgba(59, 40, 20, 0.12) 6px 6.6px),
+    repeating-radial-gradient(
+      ellipse 60% 30% at 20% 110%,
+      transparent 0 28px,
+      rgba(59, 40, 20, 0.09) 28px 29px
+    ),
+    repeating-radial-gradient(
+      ellipse 70% 32% at 85% -10%,
+      transparent 0 34px,
+      rgba(59, 40, 20, 0.07) 34px 35px
+    );
+  background-position:
+    0 0,
+    0 0,
+    0 0;
+}
+
+/* Not once the board is won: then it blooms, as in every world. */
+.minesweeper__stage[data-world='dune'] .minesweeper__board:not([data-status='won']) {
+  animation: sand-drift 70s linear infinite;
+}
+
+.minesweeper__stage[data-world='dune'] .minesweeper__cell[data-state='revealed'] {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 0.6px, transparent 1.1px);
+  background-size: 7px 7px;
+}
+
+/*
+ * Sand on the wind, blown in at the stage's left edge and out past its right,
+ * hopping: umber grains, sunlit ones, and streaks, which a gust sends in a
+ * burst (ambience.ts).
+ */
+.minesweeper__stage[data-world='dune'] .minesweeper__ambience {
+  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+}
+
+.minesweeper__stage[data-world='dune'] .minesweeper__grain {
+  --grain-color: #3b2814;
+
+  top: var(--y);
+  left: 0;
+  width: var(--length);
+  height: var(--thickness);
+  border-radius: 999px;
+  background: var(--grain-color);
+  opacity: var(--opacity);
+  translate: -100% 0;
+  animation:
+    grain-blow var(--duration) linear var(--delay) both,
+    grain-hop var(--hop-duration) ease-in-out var(--delay) infinite alternate;
+}
+
+.minesweeper__stage[data-world='dune'] .minesweeper__grain--light {
+  --grain-color: #fff4d6;
+}
+
+/* A streak: a grain blown fast, its trail behind it. */
+.minesweeper__stage[data-world='dune'] .minesweeper__grain--streak {
+  background: linear-gradient(90deg, transparent, var(--grain-color));
+}
+
+/* A tall, narrow counter; New game stencilled. */
+.minesweeper__stage[data-world='dune'] .minesweeper__number {
+  font-size: calc(var(--hud-number-size) * 1.15);
+  font-stretch: 62%;
+}
+
+.minesweeper__stage[data-world='dune'] .minesweeper__new-game {
+  font-family: var(--font-sans);
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ---------- Rainforest: canopy above, the forest floor where you clear ---------- */
+
+:is(.minesweeper__stage, .minesweeper__world)[data-world='rainforest'] {
+  --ground: #0f2e22;
+  --ink: #e6f2e4;
+  --muted: rgba(230, 242, 228, 0.55);
+  --rule: rgba(230, 242, 228, 0.14);
+
+  --accent: #f6d86b;
+  --ring-color: rgba(246, 216, 107, 0.6);
+  --glow-color: rgba(159, 227, 176, 0.4);
+
+  --board-color: #0f2e22;
+  --board-radius: 5px;
+  --board-padding: 2px;
+  --board-outline-color: rgba(159, 227, 176, 0.12);
+
+  --tile-color: #2f6a48;
+  --tile-hover-color: #3a7d57;
+  --tile-pressed-color: #24533a;
+  --tile-border: 0;
+  --revealed-color: #1a2b20;
+  --revealed-shadow: inset 0 0 0 1px rgba(159, 227, 176, 0.06);
+  --revealed-fade: floor-fade 0.4s ease-out;
+  --cell-radius: 3px;
+  --cell-gap: 2px;
+
+  --number-1-color: #9fe3b0;
+  --number-2-color: #f6d86b;
+  --number-3-color: #ff9a5c;
+  --number-4-color: #f26b8a;
+  --number-5-color: #e84b4b;
+  --number-6-color: #5fd4f0;
+  --number-7-color: #ffffff;
+  --number-8-color: #c68cff;
+  --number-font: var(--font-sans);
+  --number-weight: 700;
+  --number-width: 88%;
+  --number-scale: 0.58;
+  --hud-weight: 700;
+  --hud-letter-spacing: -0.02em;
+
+  --flag-color: #ff4f5e;
+  --flag-shape: url('./glyphs/leaf.svg?no-inline');
+  --flag-inset: 15%;
+  --flag-origin: 20% 100%;
+  --flag-idle: flag-sway 3.6s ease-in-out infinite alternate;
+  --mine-color: #f6b26b;
+  --mine-shape: url('./glyphs/seed-pod.svg?no-inline');
+  --exploded-color: #ff6b3d;
+  --exploded-mine-color: #ffffff;
+  /* Crossed out in yellow on black, the forest's own warning (poison dart frogs, wasps). */
+  --wrong-flag-color: #ffd60a;
+  --wrong-flag-halo-color: #0a140e;
+  --cover-exit: cover-curl 0.42s cubic-bezier(0.5, 0, 0.7, 0.4);
+  --cover-origin: 50% 0%;
+
+  --button-radius: 8px;
+  --picker-color: #0f2e22;
+}
+
+.minesweeper__stage[data-world='rainforest'] {
+  background: linear-gradient(180deg, #163f2e 0%, #0f2e22 55%, #0a2017 100%);
+}
+
+/* Light through the trees, drifting. */
+.minesweeper__stage[data-world='rainforest']::before {
+  background:
+    radial-gradient(20% 24% at 28% 22%, rgba(246, 216, 107, 0.13), transparent 70%),
+    radial-gradient(16% 20% at 72% 56%, rgba(159, 227, 176, 0.11), transparent 70%),
+    radial-gradient(24% 22% at 52% 88%, rgba(246, 216, 107, 0.07), transparent 70%);
+  animation: dapple-drift 28s ease-in-out infinite alternate;
+}
+
+/*
+ * Drips off the canopy: a drop falls from over the stage to --land above its
+ * foot, quicker as it goes; where it lands a ring spreads, and a smaller one
+ * a moment after, seen at a slant (ambience.ts).
+ */
+.minesweeper__stage[data-world='rainforest'] .minesweeper__drip {
+  top: 0;
+  left: var(--x);
+  width: 2px;
+  height: var(--length);
+  margin-left: -1px;
+  border-radius: 1px 1px 2px 2px / 1px 1px 3px 3px;
+  background: linear-gradient(to bottom, transparent, rgba(222, 245, 228, 0.95));
+  opacity: var(--opacity);
+  translate: 0 -100%;
+  animation: drip-fall var(--duration) cubic-bezier(0.55, 0, 1, 0.45) var(--delay) both;
+}
+
+.minesweeper__stage[data-world='rainforest'] .minesweeper__splash {
+  bottom: var(--land);
+  left: var(--x);
+  box-sizing: border-box;
+  width: var(--size);
+  height: calc(var(--size) * 0.34);
+  margin: 0 0 calc(var(--size) * -0.17) calc(var(--size) / -2);
+  border: 1px solid rgba(222, 245, 228, 0.85);
+  border-radius: 50%;
+  opacity: 0;
+  animation: splash-ring var(--duration) ease-out both;
+}
+
+.minesweeper__stage[data-world='rainforest'] .minesweeper__splash::after {
+  content: '';
+  position: absolute;
+  inset: 22%;
+  border: 1px solid rgba(222, 245, 228, 0.6);
+  border-radius: 50%;
+  animation: splash-ring var(--duration) ease-out 0.1s both;
+}
+
+/* The depth a tile curls back through. */
+.minesweeper__stage[data-world='rainforest'] .minesweeper__cell {
+  perspective: 260px;
+}
+
+.minesweeper__stage[data-world='rainforest'] .minesweeper__cell[data-state='revealed'] {
+  background-image: radial-gradient(rgba(159, 227, 176, 0.16) 0.7px, transparent 1.2px);
+  background-size: 7px 7px;
+}
+
+.minesweeper__stage[data-world='rainforest'] .minesweeper__new-game {
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+/* ---------- The worlds' motion ---------- */
+
+/*
+ * How a cover leaves as its cell is revealed, each world's own way. The
+ * cover's own style is then the end (opacity 0), all that shows with motion
+ * off; so each exit names its start, the tile as it stood.
+ */
+
+@keyframes cover-sink {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(16%) scale(0.9);
+  }
+}
+
+@keyframes cover-part {
+  from {
+    filter: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    filter: blur(2.5px);
+    opacity: 0;
+    transform: translateY(-12%) scale(1.06);
+  }
+}
+
+@keyframes cover-blow {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(34%) skewX(-14deg) scaleY(0.88);
+  }
+}
+
+@keyframes cover-curl {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: perspective(260px) rotateX(-88deg);
+  }
+}
+
+/* A flag's idle motion, each world's own. */
+
+@keyframes flag-bob {
+  from {
+    transform: translateY(-5%) rotate(-3deg);
+  }
+
+  to {
+    transform: translateY(5%) rotate(3deg);
+  }
+}
+
+@keyframes flag-twinkle {
+  from {
+    opacity: 0.75;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes flag-lean {
+  from {
+    transform: rotate(-2deg) skewX(-5deg);
+  }
+
+  to {
+    transform: rotate(3deg) skewX(6deg);
+  }
+}
+
+@keyframes flag-sway {
+  from {
+    transform: rotate(-4deg);
+  }
+
+  to {
+    transform: rotate(4deg);
+  }
+}
+
+/* The stage's slow layers. */
+
+@keyframes caustics-drift {
+  to {
+    transform: translate(-3%, 2%);
+  }
+}
+
+@keyframes stars-twinkle {
+  from {
+    opacity: 0.25;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sand-drift {
+  to {
+    background-position:
+      160px 0,
+      0 0,
+      0 0;
+  }
+}
+
+@keyframes dapple-drift {
+  to {
+    transform: translate(3%, -2%) scale(1.05);
+  }
+}
+
+/*
+ * The air. A particle's first motion is its life: it goes from where the
+ * particle starts to where it leaves, and ambience.ts removes the particle as
+ * it ends. Its other motion (a sway, a hop) runs alongside, in transform.
+ */
+
+/* From just under the stage to just over it. */
+@keyframes bubble-rise {
+  to {
+    translate: 0 calc(-100cqh - 100%);
+  }
+}
+
+@keyframes bubble-sway {
+  from {
+    transform: translateX(calc(-1 * var(--sway)));
+  }
+
+  to {
+    transform: translateX(var(--sway));
+  }
+}
+
+/* Head first, along the way it's turned: its bright end leads. */
+@keyframes meteor-fly {
+  12%,
+  65% {
+    opacity: var(--brightness);
+  }
+
+  to {
+    opacity: 0;
+    translate: var(--dx) var(--dy);
+  }
+}
+
+@keyframes meteor-tail {
+  from {
+    scale: 0.15 1;
+  }
+}
+
+/* From just left of the stage to just past its right edge. */
+@keyframes grain-blow {
+  from {
+    translate: -100% 0;
+  }
+
+  to {
+    translate: 100cqw 0;
+  }
+}
+
+@keyframes grain-hop {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(var(--hop));
+  }
+}
+
+@keyframes drip-fall {
+  from {
+    translate: 0 -100%;
+    scale: 1 0.6;
+  }
+
+  to {
+    translate: 0 calc(100cqh - var(--land) - 100%);
+    scale: 1 1.25;
+  }
+}
+
+@keyframes splash-ring {
+  from {
+    opacity: var(--opacity);
+    scale: 0.2;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1;
+  }
+}

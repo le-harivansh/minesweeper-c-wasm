@@ -2,27 +2,94 @@
 /**
  * The game. Its only public entry: the Lab entry's MDX mounts it.
  *
- * Renders every part but the cells: the controls, then the stage with the
- * HUD, an empty board and the message line. main.ts loads the game into them
- * once it nears the viewport; until then the board is busy and the HUD shows
- * no numbers. The scripts find each part by its class.
+ * Renders every part but the cells: the controls (the difficulty, the world,
+ * sound), then the stage with its air (an empty layer under the rest, which
+ * ambience.ts fills), the HUD, an empty board, the message line and New game.
+ * main.ts loads the game into them once it nears the viewport; until then the
+ * board is busy and the HUD shows no numbers. The scripts find each part by
+ * its class.
+ *
+ * The controls are one row, as in the prototype: the difficulty and the world
+ * as two segmented groups, then Sound. A world's segment shows its flag before
+ * its name: the board's own glyph, which worlds.css sets on the button with
+ * the rest of its tokens. Sound is an icon alone: its name is for screen
+ * readers, its state in aria-pressed. Its icon and New game's are drawn here
+ * and set in motion by controls.css.
+ *
+ * The stage starts in the first world; main.ts paints the one the player
+ * chose last as soon as it runs, before the game loads.
  */
 import './minesweeper.css';
+import './controls.css';
+import './worlds.css';
+import { WORLD_LABELS, WORLD_NAMES } from './worlds.ts';
+
+// The Sound icon, on a 24-unit grid: the speaker, its waves and the cross it
+// shows when off. controls.css draws the waves in turn, the small one (first
+// here) then the large, and the cross's two strokes at once.
+const SPEAKER = 'M4.5 9.5h2.8l4.2-3.6v12.2l-4.2-3.6H4.5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1z';
+const SMALL_WAVE = 'M15.2 9.4a3.8 3.8 0 0 1 0 5.2';
+const LARGE_WAVE = 'M17.9 6.8a7.6 7.6 0 0 1 0 10.4';
+const CROSS = 'M15.7 9.3l5.4 5.4M21.1 9.3l-5.4 5.4';
 ---
 
 <div class="minesweeper">
   <div class="minesweeper__controls">
-    <div class="minesweeper__difficulty" role="group" aria-label="Difficulty">
-      <button type="button" data-difficulty="beginner" aria-pressed="true">Beginner</button>
-      <button type="button" data-difficulty="intermediate" aria-pressed="false">
-        Intermediate
+    <div
+      class="minesweeper__difficulty minesweeper__segmented"
+      role="group"
+      aria-label="Difficulty"
+    >
+      <button type="button" data-difficulty="beginner" aria-pressed="true">
+        Beginner <span class="minesweeper__size">9×9 · 10 mines</span>
       </button>
-      <button type="button" data-difficulty="expert" aria-pressed="false">Expert</button>
+      <button type="button" data-difficulty="intermediate" aria-pressed="false">
+        Intermediate <span class="minesweeper__size">16×16 · 40</span>
+      </button>
+      <button type="button" data-difficulty="expert" aria-pressed="false">
+        Expert <span class="minesweeper__size">30×16 · 99</span>
+      </button>
     </div>
-    <button class="minesweeper__new-game" type="button">New game</button>
+
+    <div class="minesweeper__worlds minesweeper__segmented" role="group" aria-label="World">
+      {
+        WORLD_NAMES.map((world, index) => (
+          <button
+            class="minesweeper__world"
+            type="button"
+            data-world={world}
+            aria-pressed={index === 0 ? 'true' : 'false'}
+          >
+            {WORLD_LABELS[world]}
+          </button>
+        ))
+      }
+    </div>
+
+    <button class="minesweeper__sound" type="button" aria-pressed="false">
+      <svg
+        class="minesweeper__sound-icon"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path class="minesweeper__speaker" d={SPEAKER}></path>
+        <path class="minesweeper__sound-wave" pathLength="1" d={SMALL_WAVE}></path>
+        <path class="minesweeper__sound-wave" pathLength="1" d={LARGE_WAVE}></path>
+        <path class="minesweeper__sound-off" pathLength="2" d={CROSS}></path>
+      </svg>
+      <span class="minesweeper__visually-hidden">Sound</span>
+    </button>
   </div>
 
-  <div class="minesweeper__stage">
+  <div class="minesweeper__stage" data-world={WORLD_NAMES[0]}>
+    <div class="minesweeper__ambience" aria-hidden="true"></div>
+
     <div class="minesweeper__hud">
       <p class="minesweeper__stat">
         <span class="minesweeper__label">Mines left</span>
@@ -46,10 +113,31 @@ import './minesweeper.css';
       </p>
     </div>
 
-    <div class="minesweeper__board" role="grid" aria-label="Minesweeper board" aria-busy="true">
+    <div class="minesweeper__board-area">
+      <div class="minesweeper__board" role="grid" aria-label="Minesweeper board" aria-busy="true">
+      </div>
     </div>
 
-    <p class="minesweeper__message" aria-live="polite">Loading…</p>
+    <div class="minesweeper__footer">
+      <p class="minesweeper__message" aria-live="polite">Loading…</p>
+      <button class="minesweeper__new-game" type="button">
+        <svg
+          class="minesweeper__new-game-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"></path>
+          <path d="M6.7 2.7v4h4"></path>
+        </svg>
+        New game
+      </button>
+    </div>
   </div>
 </div>
 

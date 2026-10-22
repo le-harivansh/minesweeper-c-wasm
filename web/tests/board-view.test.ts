@@ -1,14 +1,21 @@
 /**
  * Tests the pure half of web/src/lab/minesweeper/board-view.ts: each cell's
- * accessible name, and where each grid key moves the focus. The half that
- * builds and paints the cells needs a page; it is checked in the browser.
+ * accessible name, where each grid key moves the focus, when each cell's
+ * motion starts, and a cell's neighbors. The half that builds and paints the
+ * cells needs a page; it is checked in the browser.
  *
  * Run with `make test-wasm`. Node runs this file as it is, by stripping the
  * types without checking them; `pnpm check` (astro check) checks them.
  */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { cellAfterKey, cellLabel } from '../src/lab/minesweeper/board-view.ts';
+import {
+  cellAfterKey,
+  cellLabel,
+  neighborIndexes,
+  revealDelayMs,
+  showDelayMs,
+} from '../src/lab/minesweeper/board-view.ts';
 import { applyMove, EMPTY_BOARD, type Board } from '../src/lab/minesweeper/game-session.ts';
 
 /**
@@ -104,4 +111,34 @@ test('any other key moves nothing', () => {
   for (const key of ['Tab', 'Enter', ' ', 'f', 'PageDown']) {
     assert.equal(cellAfterKey(5, press(key), KEYS_BOARD), null, key);
   }
+});
+
+/** The prototype's ripple: 32 ms a ring, every ring from the 14th on together. */
+test('a revealed cell waits for its ring, up to the 14th', () => {
+  assert.equal(revealDelayMs(0), 0);
+  assert.equal(revealDelayMs(1), 32);
+  assert.equal(revealDelayMs(14), 448);
+  assert.equal(revealDelayMs(30), 448);
+});
+
+/**
+ * The prototype's loss: the other mines surface from 140 ms, 55 ms per ring
+ * of cells around the exploded one, the larger of rows and columns apart.
+ * On KEYS_BOARD, with cell 5 exploded: 6, 10 and 8 (diagonally) are next
+ * to it; 3 and 11 are two columns away.
+ */
+test('a shown mine surfaces by its distance from the exploded one', () => {
+  assert.equal(showDelayMs(6, 5, KEYS_BOARD.columns), 195);
+  assert.equal(showDelayMs(10, 5, KEYS_BOARD.columns), 195);
+  assert.equal(showDelayMs(3, 5, KEYS_BOARD.columns), 250);
+  assert.equal(showDelayMs(8, 5, KEYS_BOARD.columns), 195);
+  assert.equal(showDelayMs(11, 5, KEYS_BOARD.columns), 250);
+});
+
+/** Corners have three, edges five, the inside eight; never the cell itself. */
+test("a cell's neighbors stay on the board", () => {
+  assert.deepEqual(neighborIndexes(0, KEYS_BOARD), [1, 4, 5]);
+  assert.deepEqual(neighborIndexes(7, KEYS_BOARD), [2, 3, 6, 10, 11]);
+  assert.deepEqual(neighborIndexes(5, KEYS_BOARD), [0, 1, 2, 4, 6, 8, 9, 10]);
+  assert.deepEqual(neighborIndexes(11, KEYS_BOARD), [6, 7, 10]);
 });

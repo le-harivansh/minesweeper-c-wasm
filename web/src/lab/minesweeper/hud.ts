@@ -6,6 +6,10 @@
  * hears it then and not on every move; the cells carry the rest. The clock
  * ticks while the game is in play, once a second, on the second.
  *
+ * A message is a list of parts, so the line can set what matters in bold (as
+ * the prototype does): where the mine was, how long a clear took. The parts
+ * become text and <b> elements, never HTML.
+ *
  * formatDuration() and the messages are pure and tested in Node; the rest
  * needs a page.
  */
@@ -23,13 +27,21 @@ import type { WinRecord } from './preferences.ts';
 
 const STATUS_LABELS: Record<GameStatus, string> = {
   ready: 'Ready',
-  playing: 'Playing',
-  won: 'Won',
+  playing: 'Clearing',
+  won: 'Cleared',
   lost: 'Lost',
 };
 
 export const READY_MESSAGE =
-  'The first reveal is always safe. To flag a cell, right-click it, long-press it or press F.';
+  'First click is always safe and opens an area. Right-click, long-press or press F to flag.';
+
+/** A part of a message: plain text, or text the line shows in bold. */
+export type MessagePart = string | { readonly strong: string };
+
+/** A message as one string, as a screen reader reads it. */
+export function messageText(parts: readonly MessagePart[]): string {
+  return parts.map((part) => (typeof part === 'string' ? part : part.strong)).join('');
+}
 
 /** A time as the clock shows it, in whole seconds: "0:07", "1:23", "61:05". */
 export function formatDuration(ms: number): string {
@@ -38,36 +50,36 @@ export function formatDuration(ms: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
 
-/** Where the mine went off, and how the flags fared, if there were any. */
-export function lossMessage(board: Board): string {
+/** Where the mine went off, in bold, and how the flags fared, if there were any. */
+export function lossMessage(board: Board): MessagePart[] {
   const exploded = board.cells.findIndex((cell) => cell.state === 'exploded');
   const wrongFlags = board.cells.filter((cell) => cell.state === 'wrong-flag').length;
   const rightFlags = board.cells.filter((cell) => cell.state === 'flagged').length;
-  const where = `Mine at ${cellPosition(board, exploded)}.`;
+  const where: MessagePart[] = ['Mine at ', { strong: cellPosition(board, exploded) }, '.'];
 
   if (wrongFlags > 0) {
-    return `${where} ${wrongFlags} ${wrongFlags === 1 ? 'flag was' : 'flags were'} wrong.`;
+    return [...where, ` ${wrongFlags} ${wrongFlags === 1 ? 'flag was' : 'flags were'} wrong.`];
   }
 
-  return rightFlags > 0 ? `${where} Every flag was right.` : where;
+  return rightFlags > 0 ? [...where, ' Every flag was right.'] : where;
 }
 
-/** The time, and how it stands against the best at this difficulty. */
-export function winMessage({ timeMs, previousBestMs }: WinRecord): string {
-  const cleared = `Cleared in ${formatDuration(timeMs)}.`;
+/** The time, in bold, and how it stands against the best at this difficulty. */
+export function winMessage({ timeMs, previousBestMs }: WinRecord): MessagePart[] {
+  const cleared: MessagePart[] = ['Cleared in ', { strong: formatDuration(timeMs) }];
 
   if (previousBestMs === null) {
-    return `${cleared} Your first clear at this level on this device.`;
+    return [...cleared, '. First clear at this size on this device.'];
   }
 
   if (timeMs < previousBestMs) {
     const gainMs = previousBestMs - timeMs;
     const by = gainMs < 1000 ? 'by under a second' : `${formatDuration(gainMs)} faster`;
 
-    return `${cleared} A new best, ${by}.`;
+    return [...cleared, `. New best, ${by}.`];
   }
 
-  return `${cleared} Best on this device: ${formatDuration(previousBestMs)}.`;
+  return [...cleared, `. Best on this device: ${formatDuration(previousBestMs)}.`];
 }
 
 /** A count as the HUD shows it, with a true minus sign when negative. */
@@ -120,10 +132,22 @@ export function createHud(root: HTMLElement, elapsedMs: () => number): Hud {
   }
 
   // An unchanged text isn't set again, so a screen reader doesn't repeat it.
-  function say(text: string): void {
-    if (message.textContent !== text) {
-      message.textContent = text;
+  function say(parts: readonly MessagePart[]): void {
+    if (message.textContent === messageText(parts)) {
+      return;
     }
+
+    message.replaceChildren(
+      ...parts.map((part) => {
+        if (typeof part === 'string') {
+          return document.createTextNode(part);
+        }
+
+        const strong = document.createElement('b');
+        strong.textContent = part.strong;
+        return strong;
+      }),
+    );
   }
 
   return {
@@ -145,7 +169,7 @@ export function createHud(root: HTMLElement, elapsedMs: () => number): Hud {
 
       for (const event of move) {
         if (event.type === 'gameCreated') {
-          say(READY_MESSAGE);
+          say([READY_MESSAGE]);
         } else if (event.type === 'gameLost') {
           say(lossMessage(board));
         }

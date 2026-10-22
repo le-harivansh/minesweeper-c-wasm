@@ -9,6 +9,7 @@
  * `pnpm check` (astro check) checks them.
  */
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { DIFFICULTY, loadGameCore, type GameEvent } from '../src/lab/minesweeper/game-core.ts';
@@ -183,4 +184,30 @@ test('a win returns a flag on each mine, then gameWon', async () => {
     { type: 'gameWon' },
   ];
   assert.deepEqual(lastMove.slice(-expectedEnd.length), expectedEnd);
+});
+
+/**
+ * The difficulty buttons (Minesweeper.astro) give each board's size, as
+ * "9×9 · 10 mines" or "16×16 · 40": columns × rows, then mines (the word
+ * only on the first, as in the prototype). The module decides the sizes
+ * (src/game.c); this keeps the markup's copy true to them.
+ */
+test("each difficulty button gives its board's size as the module deals it", async () => {
+  const markup = readFileSync(
+    new URL('../src/lab/minesweeper/Minesweeper.astro', import.meta.url),
+    'utf8',
+  );
+  const game = await load();
+
+  for (const [name, difficulty] of Object.entries(DIFFICULTY)) {
+    const created = game.newGame(difficulty, SEED)[0];
+    const button = new RegExp(`data-difficulty="${name}"[^>]*>\\s*\\w+ <span[^>]*>([^<]+)</span>`);
+
+    assert.equal(created.type, 'gameCreated');
+    assert.equal(
+      button.exec(markup)?.[1]?.replace(/ mines$/, ''),
+      created.type === 'gameCreated' && `${created.columns}×${created.rows} · ${created.mines}`,
+      name,
+    );
+  }
 });
