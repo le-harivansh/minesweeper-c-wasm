@@ -2,26 +2,55 @@
 /**
  * The game. Its only public entry: the Lab entry's MDX mounts it.
  *
- * Renders the controls, the status line and an empty board; main.ts loads the
- * game into them. For now the board is a bare grid (bare-grid.ts).
+ * Renders every part but the cells: the controls, then the stage with the
+ * HUD, an empty board and the message line. main.ts loads the game into them
+ * once it nears the viewport; until then the board is busy and the HUD shows
+ * no numbers. The scripts find each part by its class.
  */
 import './minesweeper.css';
 ---
 
 <div class="minesweeper">
   <div class="minesweeper__controls">
-    <label>
-      Difficulty
-      <select class="minesweeper__difficulty">
-        <option value="beginner">Beginner</option>
-        <option value="intermediate">Intermediate</option>
-        <option value="expert">Expert</option>
-      </select>
-    </label>
+    <div class="minesweeper__difficulty" role="group" aria-label="Difficulty">
+      <button type="button" data-difficulty="beginner" aria-pressed="true">Beginner</button>
+      <button type="button" data-difficulty="intermediate" aria-pressed="false">
+        Intermediate
+      </button>
+      <button type="button" data-difficulty="expert" aria-pressed="false">Expert</button>
+    </div>
     <button class="minesweeper__new-game" type="button">New game</button>
   </div>
-  <p class="minesweeper__status" aria-live="polite">Loading…</p>
-  <div class="minesweeper__board"></div>
+
+  <div class="minesweeper__stage">
+    <div class="minesweeper__hud">
+      <p class="minesweeper__stat">
+        <span class="minesweeper__label">Mines left</span>
+        <span class="minesweeper__number minesweeper__mines">–</span>
+      </p>
+      <div class="minesweeper__progress-area">
+        <span class="minesweeper__label minesweeper__status-label">Loading</span>
+        <div
+          class="minesweeper__progress"
+          role="progressbar"
+          aria-label="Cleared"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        >
+        </div>
+      </div>
+      <p class="minesweeper__stat minesweeper__stat--time">
+        <span class="minesweeper__label">Time</span>
+        <span class="minesweeper__number minesweeper__time">0:00</span>
+      </p>
+    </div>
+
+    <div class="minesweeper__board" role="grid" aria-label="Minesweeper board" aria-busy="true">
+    </div>
+
+    <p class="minesweeper__message" aria-live="polite">Loading…</p>
+  </div>
 </div>
 
 <script>

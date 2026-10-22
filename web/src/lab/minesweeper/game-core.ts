@@ -23,6 +23,13 @@ export const DIFFICULTY = {
 
 export type Difficulty = (typeof DIFFICULTY)[keyof typeof DIFFICULTY];
 
+/** A difficulty by name, as the page's controls and storage know it. */
+export type DifficultyName = keyof typeof DIFFICULTY;
+
+export function isDifficultyName(name: string): name is DifficultyName {
+  return Object.hasOwn(DIFFICULTY, name);
+}
+
 /**
  * One visible change: an event of src/game.h, named after it
  * (EVENT_CELL_REVEALED → 'cellRevealed'). A cell's `ring` is how many steps

@@ -75,10 +75,11 @@ $(GAME)/minesweeper.wasm: $(BUILD)/minesweeper.wasm
 
 # Tests the built module in Node, loaded the way the browser will load it:
 # its exports and imports, and that each event reaches its JS function. Then
-# game-core.ts, the browser's side of the boundary, over the same module
-# (Node runs TypeScript as is, with no build step).
+# every test of the game's TypeScript in web/tests/: game-core.ts over the
+# same module, the rest with no module at all (Node runs TypeScript as is,
+# with no build step).
 test-wasm: $(BUILD)/minesweeper.wasm
-	node --test tests/minesweeper.test.mjs web/tests/game-core.test.ts
+	node --test tests/minesweeper.test.mjs web/tests/*.test.ts
 
 # The harness's packages, installed again whenever package.json or the
 # lockfile changes. --frozen-lockfile installs exactly what the lockfile says

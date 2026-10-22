@@ -3,7 +3,7 @@
  * Astro's scoped styles never reach. Every selector sits under .minesweeper,
  * so nothing leaks onto the page.
  *
- * For now the bare grid, in the page's own colours.
+ * For now one plain stage in the page's own colours; the worlds come later.
  */
 
 .minesweeper {
@@ -12,38 +12,144 @@
   font-size: 15px;
 }
 
+/* Controls */
+
 .minesweeper__controls {
   display: flex;
   flex-wrap: wrap;
   gap: 12px 20px;
   align-items: center;
+  margin-bottom: 24px;
 }
 
-.minesweeper__controls label {
+.minesweeper__difficulty {
+  display: inline-flex;
+  border: 1px solid var(--ink);
+}
+
+.minesweeper__difficulty button,
+.minesweeper__new-game {
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.minesweeper__difficulty button + button {
+  border-left: 1px solid var(--ink);
+}
+
+.minesweeper__difficulty button[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--ground);
+  cursor: default;
+}
+
+.minesweeper__new-game {
+  border: 1px solid var(--ink);
+}
+
+/*
+ * The stage: HUD, board and message, as wide as the board (never less than a
+ * HUD needs, never more than the page has).
+ */
+
+.minesweeper__stage {
+  width: max-content;
+  min-width: min(100%, 320px);
+  max-width: 100%;
+}
+
+.minesweeper__hud {
   display: flex;
-  gap: 8px;
-  align-items: center;
+  gap: 8px 20px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
-.minesweeper__status {
-  margin: 16px 0;
+.minesweeper__stat {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.minesweeper__stat--time {
+  text-align: right;
+}
+
+.minesweeper__label {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.minesweeper__number {
+  font-family: var(--font-sans);
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.minesweeper__progress-area {
+  display: grid;
+  flex: 1;
+  gap: 6px;
+  min-width: 64px;
+  padding-bottom: 4px;
+}
+
+.minesweeper__progress {
+  height: 4px;
+  background: var(--rule);
+}
+
+.minesweeper__progress::before {
+  content: '';
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transform: scaleX(var(--progress, 0));
+  transform-origin: left;
+}
+
+/* contain: the message wraps to the stage's width instead of widening it. */
+.minesweeper__message {
+  contain: inline-size;
+  margin: 12px 0 0;
   color: var(--muted);
 }
 
 /* Expert is 30 columns, wider than a phone: the board scrolls sideways. */
 .minesweeper__board {
   --cell-size: 28px;
+  --cell-gap: 2px;
 
-  display: grid;
-  grid-template-columns: repeat(var(--columns), var(--cell-size));
-  gap: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cell-gap);
   max-width: 100%;
   width: max-content;
   overflow-x: auto;
+  /* Pans and pinch-zooms stay the page's; a double tap no longer zooms. */
+  touch-action: manipulation;
+  -webkit-user-select: none;
   user-select: none;
+  /* No callout on a long press in iOS: a long press flags. */
+  -webkit-touch-callout: none;
 }
 
-.minesweeper__board button {
+.minesweeper__row {
+  display: flex;
+  gap: var(--cell-gap);
+}
+
+.minesweeper__cell {
+  flex: none;
   width: var(--cell-size);
   height: var(--cell-size);
   padding: 0;
@@ -54,14 +160,47 @@
   font-weight: 500;
 }
 
-.minesweeper__board button[data-state='hidden'],
-.minesweeper__board button[data-state='flagged'] {
+/*
+ * The page's ring would sit outside the cell, in ink, on the ink of the
+ * covered cells around it. Inside, in the cell's own colour, it shows on
+ * covered and revealed cells alike.
+ */
+.minesweeper__cell:focus-visible {
+  outline-color: currentColor;
+  outline-offset: -5px;
+}
+
+.minesweeper__cell[data-state='hidden'],
+.minesweeper__cell[data-state='flagged'] {
   background: var(--ink);
   color: var(--ground);
   cursor: pointer;
 }
 
-.minesweeper__board button[data-state='exploded'] {
+/* Once the game is over, no cell takes a click. */
+.minesweeper__board:is([data-status='won'], [data-status='lost']) .minesweeper__cell {
+  cursor: default;
+}
+
+.minesweeper__cell[data-state='exploded'] {
   background: var(--muted);
   color: var(--ground);
+}
+
+/* What a cell shows: the view writes its state and number, this draws them. */
+.minesweeper__cell[data-count]::after {
+  content: attr(data-count);
+}
+
+.minesweeper__cell[data-state='flagged']::after {
+  content: '⚑';
+}
+
+.minesweeper__cell[data-state='exploded']::after,
+.minesweeper__cell[data-state='mine']::after {
+  content: '✸';
+}
+
+.minesweeper__cell[data-state='wrong-flag']::after {
+  content: '✕';
 }

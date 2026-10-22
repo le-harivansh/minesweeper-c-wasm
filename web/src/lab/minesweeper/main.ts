@@ -1,9 +1,10 @@
 /**
  * Starts every game on the page. The page shows the game's static parts
- * without this; once a game nears the viewport, this loads the core and the
- * grid, each in its own chunk, and starts them.
+ * without this; once a game nears the viewport, this downloads the module
+ * and, side by side, the rest of the game's code (start-game.ts, its own
+ * chunk), then starts it.
  *
- * The import() calls also keep this entry an external script. Astro inlines a
+ * The import() also keeps this entry an external script. Astro inlines a
  * small script that imports nothing into the page, and the site's
  * Content-Security-Policy blocks inline scripts.
  */
@@ -17,12 +18,10 @@ import wasmUrl from './minesweeper.wasm?url&no-inline';
 const LOAD_MARGIN = '200px';
 
 async function start(root: HTMLElement): Promise<void> {
-  const [{ loadGameCore }, { startBareGrid }] = await Promise.all([
-    import('./game-core.ts'),
-    import('./bare-grid.ts'),
-  ]);
+  const wasm = fetch(wasmUrl);
+  const { startGame } = await import('./start-game.ts');
 
-  startBareGrid(root, await loadGameCore(fetch(wasmUrl)));
+  await startGame(root, wasm);
 }
 
 for (const root of document.querySelectorAll<HTMLElement>('.minesweeper')) {
@@ -34,10 +33,10 @@ for (const root of document.querySelectorAll<HTMLElement>('.minesweeper')) {
 
       observer.disconnect();
       start(root).catch((error: unknown) => {
-        const status = root.querySelector('.minesweeper__status');
+        const message = root.querySelector('.minesweeper__message');
 
-        if (status) {
-          status.textContent = 'The game failed to load.';
+        if (message) {
+          message.textContent = 'The game failed to load.';
         }
 
         console.error(error);
