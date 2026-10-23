@@ -26,6 +26,10 @@ CORE := src/game.c src/random.c
 # The game's folder in the web harness (web/): everything the site will get.
 GAME := web/src/lab/minesweeper
 
+# The site (harivansh.dev), a sibling of this repository's parent folder.
+# `make site SITE=path/to/site` copies into another one.
+SITE ?= ../../harivansh.dev
+
 # The wasm build: for wasm32, with no OS and no libc (-ffreestanding,
 # -nostdlib), a library the browser calls rather than a program (--no-entry),
 # optimized for size. -Werror: a warning stops the build, so none can ship.
@@ -34,7 +38,7 @@ GAME := web/src/lab/minesweeper
 WASM_FLAGS := --target=wasm32 -mbulk-memory -Os -Werror -ffreestanding -nostdlib -Wl,--no-entry
 
 # Not files: always run these, even if a file named "test" or "clean" exists.
-.PHONY: test wasm test-wasm dev preview clean
+.PHONY: test wasm test-wasm dev preview site clean
 
 # The first target is the default, so plain `make` runs the tests.
 # `make test ONLY=flag` runs only the tests whose name contains "flag".
@@ -101,6 +105,15 @@ dev: wasm web/node_modules
 preview: wasm web/node_modules
 	pnpm --dir web build
 	pnpm --dir web preview
+
+# Copies the game's folder into the site's src/lab/minesweeper/, where the
+# site commits it, the module included: its host builds without a C
+# toolchain. One way only: the game is edited here, and --delete removes
+# from the copy whatever is gone from here. The test fails, rather than
+# copying into a new folder, when SITE isn't a site.
+site: wasm
+	test -d $(SITE)/src/content
+	rsync -a --delete --exclude .DS_Store $(GAME)/ $(SITE)/src/lab/minesweeper/
 
 $(BUILD):
 	mkdir -p $@

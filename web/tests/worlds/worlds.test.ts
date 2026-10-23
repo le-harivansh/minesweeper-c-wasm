@@ -174,10 +174,13 @@ function contrast(x: Rgba, y: Rgba): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-/** WCAG 2.2, 1.4.3: text, here the HUD's numbers and the message's bold parts. */
+/**
+ * WCAG 2.2, 1.4.3: text. The labels, the HUD's numbers and the message, and
+ * the numbers on the board too: a number is its cell's size times the
+ * world's --number-scale, 13 to 25 px, so it is large text (24 px, or 18.7
+ * bold) only on the biggest cells.
+ */
 const TEXT = 4.5;
-/** WCAG 2.2, 1.4.3, for large text: the numbers on the board, at full size. */
-const LARGE_TEXT = 3;
 /** WCAG 2.2, 1.4.11: what tells a state or a shape apart from what's next to it. */
 const NON_TEXT = 3;
 
@@ -192,8 +195,10 @@ const NON_TEXT = 3;
  * leaf is as light as the canopy (2.0), and a few exploded mines sit under
  * 3. Their texture, glyph and motion carry those states instead. What's left
  * here is what the prototype does reach, so a change can't make it worse.
- * Dune's labels are the faintest text (3.04, under 1.4.3's 4.5): they're
- * held where they are.
+ * Text is the exception: every piece of it reaches 4.5, as the site it sits
+ * in claims (2026-10-23). Four of the prototype's colours were lifted for it,
+ * in the same hue: dune's muted ink (3.04) and its 3 and 5 (3.99, 3.28), and
+ * rainforest's 5 (3.93).
  *
  * A wrong flag's cross is ours, not the prototype's (the user's call too):
  * it lies on its halo, and the halo on the flag, so each pair must stand
@@ -213,11 +218,11 @@ function figures(tokens: Map<string, string>): [string, number, number][] {
 
   return [
     ['ink on ground', contrast(color('--ink'), ground), TEXT],
-    ['muted on ground', contrast(over(color('--muted'), ground), ground), 3],
+    ['muted on ground', contrast(over(color('--muted'), ground), ground), TEXT],
     ...Array.from({ length: 8 }, (_, i): [string, number, number] => [
       `number ${i + 1} on revealed`,
       contrast(color(`--number-${i + 1}-color`), revealed),
-      LARGE_TEXT,
+      TEXT,
     ]),
     ['mine on the board', contrast(color('--mine-color'), board), NON_TEXT],
     ['accent on ground', contrast(accent, ground), NON_TEXT],

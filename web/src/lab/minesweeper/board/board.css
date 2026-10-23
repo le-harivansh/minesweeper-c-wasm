@@ -60,8 +60,16 @@
   -webkit-touch-callout: none;
 }
 
-/* Until the game loads the board has no cells: its edge alone would be a dot. */
+/*
+ * Until the game loads the board has no cells: its edge alone would be a dot.
+ * It takes the size Beginner's 9 × 9 cells will give it, the difficulty of a
+ * first visit, so nothing under it moves when they arrive. (A player back at
+ * another difficulty still sees the page move once.)
+ */
 .minesweeper__board[aria-busy='true'] {
+  box-sizing: border-box;
+  width: calc(9 * var(--cell-size) + 8 * var(--cell-gap) + 2 * var(--board-padding));
+  height: calc(9 * var(--cell-size) + 8 * var(--cell-gap) + 2 * var(--board-padding));
   outline: none;
 }
 

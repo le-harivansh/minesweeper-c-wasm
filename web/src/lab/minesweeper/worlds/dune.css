@@ -6,7 +6,8 @@
 :is(.minesweeper__stage, .minesweeper__world)[data-world='dune'] {
   --ground: #d9b778;
   --ink: #3b2814;
-  --muted: rgba(59, 40, 20, 0.6);
+  /* The prototype's 0.6 reached 3.04:1 on the sand, under AA's 4.5 for small text. */
+  --muted: rgba(59, 40, 20, 0.8);
   --rule: rgba(59, 40, 20, 0.16);
 
   --accent: #2b3a8f;
@@ -28,11 +29,12 @@
   --cell-radius: 0;
   --cell-gap: 0px;
 
+  /* 3 and 5 lifted from the prototype's #e07a4a and #e25a4a, to 4.5:1 on the floor. */
   --number-1-color: #f1ddb0;
   --number-2-color: #e8b86a;
-  --number-3-color: #e07a4a;
+  --number-3-color: #e48b61;
   --number-4-color: #b9a9e8;
-  --number-5-color: #e25a4a;
+  --number-5-color: #ea867a;
   --number-6-color: #8fc9c0;
   --number-7-color: #ffffff;
   --number-8-color: #ff9c8a;

@@ -88,6 +88,7 @@ Run from the repo root.
 | `make test-wasm`              | Tests the built module in Node, loaded the way the browser loads it, then the front end's TypeScript   |
 | `make dev`                    | Serves the harness with Astro's dev server                                                             |
 | `make preview`                | Builds the harness for production and serves it under the site's Content Security Policy               |
+| `make site`                   | Copies the game folder, module included, into the site at `SITE` (default `../../harivansh.dev`)       |
 | `make clean`                  | Removes the build output; the harness's packages stay                                                  |
 | `pnpm --dir web check`        | Type-checks the harness (`astro check`)                                                                |
 | `pnpm --dir web format:check` | Checks the formatting with Prettier                                                                    |
