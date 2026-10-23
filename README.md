@@ -132,7 +132,7 @@ Run from the repo root.
 ## Acknowledgements
 
 - [PCG](https://www.pcg-random.org) by Melissa O'Neill: [`src/random.c`](src/random.c) implements PCG32 and its unbiased bounded draw.
-- [IBM Plex Mono](https://github.com/IBM/plex), under the SIL Open Font License 1.1: the game bundles its 300 and 600 weights.
+- [IBM Plex Mono](https://github.com/IBM/plex), under the [SIL Open Font License 1.1](web/src/lab/minesweeper/assets/fonts/OFL.txt): the game bundles its 300 and 600 weights, with the license beside them.
 
 ## License
 
