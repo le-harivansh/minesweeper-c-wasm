@@ -14,32 +14,20 @@
  *
  * Each cell holds its cover, the tile the CSS takes away when the cell is
  * revealed. The motion is CSS; the view only says when each cell's part of
- * it starts: a reveal ripples out ring by ring from the click, and a loss
- * shows the other mines nearest the exploded one first. The timings are the
- * prototype's (tmp/Minesweeper.html in the C repo).
+ * it starts, from move-timing.ts: a reveal ripples out ring by ring from the
+ * click, and a loss shows the other mines nearest the exploded one first.
  *
  * Hovering a revealed number with a mouse marks its hidden neighbors, to
  * help count them.
  *
- * cellLabel(), cellAfterKey(), revealDelayMs(), showDelayMs() and
- * neighborIndexes() are pure and tested in Node; the rest needs a page.
+ * cellLabel(), cellAfterKey() and neighborIndexes() are pure and tested in
+ * Node; the rest needs a page.
  */
 import { findPart } from './find-part.ts';
 import type { GameEvent } from './game-core.ts';
 import type { Board, CellState } from './game-session.ts';
+import { revealDelayMs, showDelayMs } from './move-timing.ts';
 import { createStarField } from './star-field.ts';
-
-/** The time between one ring of a cascade and the next. */
-export const RIPPLE_STEP_MS = 32;
-
-/** Rings past this one go with it: a long cascade's last ring starts within half a second. */
-export const LAST_RIPPLE_RING = 14;
-
-/** When the first of the other mines surfaces after a loss. */
-export const MINE_SHOWN_START_MS = 140;
-
-/** The wait for each ring of cells further out from the exploded mine. */
-export const MINE_SHOWN_STEP_MS = 55;
 
 /** What a screen reader says for each state, except a revealed cell's number. */
 const STATE_LABELS: Record<Exclude<CellState, 'revealed'>, string> = {
@@ -106,23 +94,6 @@ export function cellAfterKey(
     default:
       return null;
   }
-}
-
-/** When a revealed cell's cover starts to go: its ring's turn in the ripple. */
-export function revealDelayMs(ring: number): number {
-  return Math.min(ring, LAST_RIPPLE_RING) * RIPPLE_STEP_MS;
-}
-
-/**
- * When a mine that a loss shows surfaces: nearest the exploded one first,
- * by how many rows or columns apart they are, whichever is more (the rings
- * of cells around the exploded mine).
- */
-export function showDelayMs(cellIndex: number, explodedIndex: number, columns: number): number {
-  const rowsApart = Math.abs(Math.floor(cellIndex / columns) - Math.floor(explodedIndex / columns));
-  const columnsApart = Math.abs((cellIndex % columns) - (explodedIndex % columns));
-
-  return MINE_SHOWN_START_MS + Math.max(rowsApart, columnsApart) * MINE_SHOWN_STEP_MS;
 }
 
 /** The cells around `cellIndex`, without it, in reading order: three to eight. */

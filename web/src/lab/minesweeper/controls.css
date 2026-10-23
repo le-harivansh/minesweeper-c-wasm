@@ -152,6 +152,11 @@
  * border. Its name is for screen readers; its state is in aria-pressed.
  */
 
+/* No Web Audio, no Sound button (sound.ts): display would beat hidden. */
+.minesweeper__sound[hidden] {
+  display: none;
+}
+
 .minesweeper__sound {
   display: grid;
   place-items: center;

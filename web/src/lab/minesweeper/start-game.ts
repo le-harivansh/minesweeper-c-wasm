@@ -1,7 +1,7 @@
 /**
  * Starts one game in the markup under `root` and wires its parts:
  *
- *   controls, input ──commands──▶ session ──onMove──▶ board view, HUD
+ *   controls, input ──commands──▶ session ──onMove──▶ board view, HUD, sound
  *                                    │
  *                              core (wasm)         preferences: the difficulty,
  *                                                  best times
@@ -18,19 +18,24 @@ import { createGameSession } from './game-session.ts';
 import { createHud } from './hud.ts';
 import { attachInput } from './input.ts';
 import type { Preferences } from './preferences.ts';
+import type { Sound } from './sound.ts';
 
 /**
  * @param wasm The module's response; main.ts starts the download before this
  *   file has loaded.
  * @param preferences The page's one copy, which main.ts has loaded already.
+ * @param sound The page's sound (sound.ts), which plays each move.
  */
 export async function startGame(
   root: HTMLElement,
   wasm: Promise<Response>,
   preferences: Preferences,
+  sound: Sound,
 ): Promise<void> {
   const core = await loadGameCore(wasm);
   let difficulty = preferences.difficulty;
+  // The page's first game is dealt in silence, as the prototype's is.
+  let firstGameDealt = false;
 
   // The session calls onMove only after a command, and the first command
   // comes once the views exist.
@@ -42,6 +47,15 @@ export async function startGame(
       if (move.some((event) => event.type === 'gameWon')) {
         // Whole milliseconds: the clock's own fractions say nothing.
         hud.showWin(preferences.recordWin(difficulty, Math.round(session.elapsedMs())));
+      }
+
+      // Last, and guarded: the sound never stops the game.
+      if (firstGameDealt) {
+        try {
+          sound.playMove(move, session.board);
+        } catch (error) {
+          console.error(error);
+        }
       }
     },
   });
@@ -72,4 +86,5 @@ export async function startGame(
   }
 
   newGame(difficulty);
+  firstGameDealt = true;
 }

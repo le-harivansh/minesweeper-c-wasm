@@ -1,7 +1,8 @@
 /**
  * Tests web/src/lab/minesweeper/preferences.ts: the difficulty, the world,
- * sound and the best times kept between visits, over a fake storage, including storage that is
- * missing, refuses every call, or holds something it shouldn't.
+ * sound, the best times and each world's soundscape kept between visits, over
+ * a fake storage, including storage that is missing, refuses every call,
+ * holds something it shouldn't, or is shared with another tab.
  *
  * Run with `make test-wasm`. Node runs this file as it is, by stripping the
  * types without checking them; `pnpm check` (astro check) checks them.
@@ -108,6 +109,7 @@ test('what was stored wrongly is ignored', () => {
         world: 'moon',
         sound: 'loud',
         bestTimesMs: { beginner: -5, intermediate: 42_000, expert: 'fast', custom: 10 },
+        soundscapes: { 'deep-sea': 3, moon: 'craters', dune: 'noon' },
       }),
     ),
   );
@@ -120,6 +122,26 @@ test('what was stored wrongly is ignored', () => {
   assert.equal(mixed.recordWin('beginner', 1_000).previousBestMs, null);
   assert.equal(mixed.recordWin('intermediate', 50_000).previousBestMs, 42_000);
   assert.equal(mixed.recordWin('expert', 1_000).previousBestMs, null);
+  assert.equal(mixed.soundscape('deep-sea'), null);
+  assert.equal(mixed.soundscape('dune'), 'noon');
+});
+
+/**
+ * A full quota: what's stored reads, but nothing more is written. The page's
+ * own best, which storage never kept, still counts against the next win.
+ */
+test("storage that won't write still has this visit's best count", () => {
+  const items = new Map([[STORAGE_KEY, JSON.stringify({ bestTimesMs: { beginner: 60_000 } })]]);
+  const preferences = loadPreferences({
+    getItem: (key) => items.get(key) ?? null,
+    setItem: () => {
+      throw new Error('QuotaExceededError');
+    },
+  });
+
+  assert.equal(preferences.recordWin('beginner', 50_000).previousBestMs, 60_000);
+  assert.equal(preferences.recordWin('beginner', 55_000).previousBestMs, 50_000);
+  assert.equal(preferences.recordWin('beginner', 52_000).previousBestMs, 50_000);
 });
 
 /** No storage, or storage that throws: the game remembers for the visit only. */
@@ -130,10 +152,53 @@ test('without working storage, preferences last for the visit', () => {
     preferences.setWorld('rainforest');
     preferences.setSound(true);
     preferences.recordWin('intermediate', 30_000);
+    preferences.setSoundscape('dune', 'storm-edge');
 
     assert.equal(preferences.difficulty, 'intermediate');
     assert.equal(preferences.world, 'rainforest');
     assert.equal(preferences.sound, true);
     assert.equal(preferences.recordWin('intermediate', 40_000).previousBestMs, 30_000);
+    assert.equal(preferences.soundscape('dune'), 'storm-edge');
   }
+});
+
+/** The soundscapes move on every 45 s: each world keeps its own place, by name. */
+test("each world's soundscape comes back on the next visit", () => {
+  const storage = fakeStorage();
+  const preferences = loadPreferences(storage);
+
+  assert.equal(preferences.soundscape('night-sky'), null);
+
+  preferences.setSoundscape('night-sky', 'high-desert');
+  preferences.setSoundscape('dune', 'caravan');
+  preferences.setSoundscape('dune', 'night-cold');
+  const nextVisit = loadPreferences(storage);
+
+  assert.equal(nextVisit.soundscape('night-sky'), 'high-desert');
+  assert.equal(nextVisit.soundscape('dune'), 'night-cold');
+  assert.equal(nextVisit.soundscape('rainforest'), null);
+});
+
+/**
+ * Two tabs, each with its own copy, over one storage. Each change writes only
+ * its own part into what's stored now, so neither tab undoes the other's: a
+ * best time survives the other tab's next soundscape, and the other tab's
+ * next win counts it.
+ */
+test("one tab's changes don't undo another's", () => {
+  const storage = fakeStorage();
+  const first = loadPreferences(storage);
+  const second = loadPreferences(storage);
+
+  first.recordWin('expert', 200_000);
+  second.setSoundscape('deep-sea', 'abyss');
+  second.setWorld('rainforest');
+
+  assert.equal(second.recordWin('expert', 250_000).previousBestMs, 200_000);
+
+  const nextVisit = loadPreferences(storage);
+
+  assert.equal(nextVisit.recordWin('expert', 300_000).previousBestMs, 200_000);
+  assert.equal(nextVisit.soundscape('deep-sea'), 'abyss');
+  assert.equal(nextVisit.world, 'rainforest');
 });
