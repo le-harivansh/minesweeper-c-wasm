@@ -16,9 +16,6 @@
  * change the state a moment later, then say so in a statechange event:
  * settle() lets that happen. interrupt() suspends it as iOS does for a call,
  * refusing to resume until allowResume().
- *
- * `trace`, when given, hears every call as a line of text: the verbatim check
- * against the prototype (tmp/verify-sound/ in the C repo) compares those.
  */
 
 type Callback = () => void;
@@ -183,37 +180,18 @@ function checkValue(owner: string, value: number): void {
 }
 
 /** A number as text, exactly: the shortest that reads back the same, and −0 kept. */
-function exact(value: unknown): string {
-  return typeof value === 'number' && Object.is(value, -0) ? '-0' : String(value);
-}
-
-/** Text for a value in a trace: a node or param by its name, a number exactly. */
-function described(value: unknown): string {
-  if (value instanceof FakeParam) {
-    return value.name;
-  }
-
-  if (value instanceof FakeNode || value instanceof FakeBuffer) {
-    return value.name;
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value.map(described).join(',')}]`;
-  }
-
-  return exact(value);
+function exact(value: number): string {
+  return Object.is(value, -0) ? '-0' : String(value);
 }
 
 export class FakeParam {
   readonly name: string;
-  readonly context: FakeAudioContext;
   /** Every automation call, as text, for a test to read back. */
   readonly automation: string[] = [];
   /** What value was last set, as a real param's value reads between automations. */
   private current: number;
 
-  constructor(context: FakeAudioContext, name: string, value: number) {
-    this.context = context;
+  constructor(name: string, value: number) {
     this.name = name;
     this.current = value;
     Object.seal(this);
@@ -221,7 +199,6 @@ export class FakeParam {
 
   private automate(call: string): this {
     this.automation.push(call);
-    this.context.record(`${this.name}.${call}`);
     return this;
   }
 
@@ -231,7 +208,6 @@ export class FakeParam {
 
   set value(value: number) {
     checkValue(this.name, value);
-    this.context.record(`${this.name}.value=${exact(value)}`);
     this.current = value;
   }
 
@@ -278,16 +254,12 @@ export class FakeParam {
 }
 
 export class FakeBuffer {
-  readonly name: string;
   readonly numberOfChannels: number;
   readonly length: number;
   readonly sampleRate: number;
   readonly channels: Float32Array[];
-  // Hashed once, when first given to a node: by then it is filled.
-  private hashed: string | null = null;
 
-  constructor(name: string, channels: number, length: number, sampleRate: number) {
-    this.name = name;
+  constructor(channels: number, length: number, sampleRate: number) {
     this.numberOfChannels = channels;
     this.length = length;
     this.sampleRate = sampleRate;
@@ -297,26 +269,6 @@ export class FakeBuffer {
 
   getChannelData(channel: number): Float32Array {
     return this.channels[channel];
-  }
-
-  /** A hash of every sample, for a trace: the same noise hashes the same. */
-  hash(): string {
-    if (this.hashed !== null) {
-      return this.hashed;
-    }
-
-    let hash = 0x811c9dc5;
-
-    for (const channel of this.channels) {
-      const bytes = new Uint8Array(channel.buffer, channel.byteOffset, channel.byteLength);
-
-      for (const byte of bytes) {
-        hash = Math.imul(hash ^ byte, 0x01000193);
-      }
-    }
-
-    this.hashed = (hash >>> 0).toString(16);
-    return this.hashed;
   }
 }
 
@@ -348,23 +300,18 @@ export class FakeNode {
     this.name = context.nameFor(kind);
 
     for (const [param, value] of Object.entries(params)) {
-      this.params[param] = new FakeParam(context, `${this.name}.${param}`, value);
+      this.params[param] = new FakeParam(`${this.name}.${param}`, value);
     }
-
-    context.record(`new ${this.name}`);
   }
 
   connect(destination: FakeNode | FakeParam): FakeNode | undefined {
-    this.context.record(`${this.name}->${described(destination)}`);
     return destination instanceof FakeNode ? destination : undefined;
   }
 
-  disconnect(): void {
-    this.context.record(`${this.name}.disconnect()`);
-  }
+  /** Nothing to undo: the fake keeps no graph. */
+  disconnect(): void {}
 
   protected setProperty(property: string, value: unknown): void {
-    this.context.record(`${this.name}.${property}=${described(value)}`);
     this.properties[property] = value;
   }
 
@@ -380,9 +327,6 @@ export class FakeNode {
       throw new Error(`InvalidStateError: ${this.name} started twice`);
     }
 
-    this.context.record(
-      `${this.name}.start(${exact(at)}${offset === undefined ? '' : `,${exact(offset)}`})`,
-    );
     this.startedAt = at;
     this.context.started.add(this);
   }
@@ -394,7 +338,6 @@ export class FakeNode {
       throw new Error(`InvalidStateError: ${this.name} stopped before it started`);
     }
 
-    this.context.record(`${this.name}.stop(${exact(at)})`);
     this.stoppedAt = at;
   }
 }
@@ -479,7 +422,6 @@ class FakeBufferSource extends FakeNode {
   }
 
   set buffer(value: FakeBuffer) {
-    this.context.recordBuffer(value);
     this.setProperty('buffer', value);
   }
 
@@ -533,7 +475,6 @@ class FakeConvolver extends FakeNode {
   }
 
   set buffer(value: FakeBuffer) {
-    this.context.recordBuffer(value);
     this.setProperty('buffer', value);
   }
 }
@@ -551,16 +492,14 @@ export class FakeAudioContext {
   /** Set by interrupt(): resume() changes nothing until allowResume(). */
   private isResumeRefused = false;
   private readonly clock: VirtualClock;
-  private readonly trace: ((line: string) => void) | null;
   private readonly counts = new Map<string, number>();
   private readonly listeners: Callback[] = [];
   // The context's own time: it stands still while suspended.
   private runningSince: number | null = null;
   private elapsedMs = 0;
 
-  constructor(clock: VirtualClock, { trace }: { trace?: (line: string) => void } = {}) {
+  constructor(clock: VirtualClock) {
     this.clock = clock;
-    this.trace = trace ?? null;
     this.destination = new FakeNode(this, 'Destination', {});
   }
 
@@ -572,17 +511,6 @@ export class FakeAudioContext {
   /** Runs the context from now, as a press would. */
   start(): void {
     this.setState('running');
-  }
-
-  record(line: string): void {
-    this.trace?.(line);
-  }
-
-  /** A buffer's samples, by their hash: only when tracing, since hashing takes a while. */
-  recordBuffer(buffer: FakeBuffer): void {
-    if (this.trace) {
-      this.trace(`${buffer.name}#${buffer.hash()}`);
-    }
   }
 
   nameFor(kind: string): string {
@@ -625,9 +553,7 @@ export class FakeAudioContext {
   }
 
   createBuffer(channels: number, length: number, sampleRate: number): FakeBuffer {
-    const buffer = new FakeBuffer(this.nameFor('Buffer'), channels, length, sampleRate);
-    this.record(`new ${buffer.name}(${channels},${length},${sampleRate})`);
-    return buffer;
+    return new FakeBuffer(channels, length, sampleRate);
   }
 
   async resume(): Promise<void> {
