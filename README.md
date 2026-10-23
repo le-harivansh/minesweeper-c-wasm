@@ -2,7 +2,7 @@
 
 Minesweeper with its rules written in C23 and compiled straight to WebAssembly by clang: no Emscripten, no C standard library, no generated glue code. A small TypeScript front end draws the board, animates it and plays the sound.
 
-Play it, and read about it in the Lab at [harivansh.dev/lab/minesweeper](https://harivansh.dev/lab/minesweeper).
+Play it, and read about it in the Lab at [harivansh.dev/lab/minesweeper-in-wasm](https://harivansh.dev/lab/minesweeper-in-wasm).
 
 ## Features
 

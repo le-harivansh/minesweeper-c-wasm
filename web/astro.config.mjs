@@ -8,12 +8,12 @@ import mdx from '@astrojs/mdx';
 export default defineConfig({
   trailingSlash: 'never',
   build: {
-    // As the site: /lab/minesweeper.html rather than /lab/minesweeper/index.html.
+    // As the site: /lab/minesweeper-in-wasm.html rather than /lab/minesweeper-in-wasm/index.html.
     format: 'file',
   },
   integrations: [mdx()],
   // The harness has one page.
   redirects: {
-    '/': '/lab/minesweeper',
+    '/': '/lab/minesweeper-in-wasm',
   },
 });
