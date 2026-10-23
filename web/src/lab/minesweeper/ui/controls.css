@@ -1,0 +1,482 @@
+/*
+ * The controls: the row above the stage (the difficulty, the world, Sound)
+ * and New game in the stage's footer. The row is the prototype's
+ * (tmp/Minesweeper.html: .bar, .seg), New game its secondary .sbtn.
+ *
+ * The row stands on the page, so it takes the page's colours. A world's
+ * segment carries its world's tokens (worlds/), --ink and --ground among
+ * them, so the row keeps the page's under names of its own (--page-ink, …)
+ * before any world's apply. New game stands on the stage and takes its
+ * world's colours as they are.
+ *
+ * Every motion ends on the element's own style, so with motion off each
+ * state shows as it is, at once.
+ */
+
+.minesweeper__controls {
+  /* The prototype's white card, tinted by the page's ground. */
+  --control-color: color-mix(in srgb, var(--ground) 25%, #fff);
+  --page-ink: var(--ink);
+  --page-ground: var(--ground);
+  --page-muted: var(--muted);
+  --page-rule: var(--rule);
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: stretch;
+}
+
+/* The difficulty and the world: segmented groups, the chosen segment filled. */
+
+.minesweeper__segmented {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--page-rule);
+  border-radius: 9px;
+  background: var(--control-color);
+}
+
+.minesweeper__segmented button {
+  display: grid;
+  padding: 8px 12px;
+  border: 0;
+  border-right: 1px solid var(--page-rule);
+  background: transparent;
+  color: var(--page-ink);
+  font: 13px / 1.15 var(--font-sans);
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    color 0.12s;
+}
+
+.minesweeper__segmented button:last-child {
+  border-right: 0;
+}
+
+/* Inside the segment: the group clips anything outside it. */
+.minesweeper__segmented button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -4px;
+}
+
+/* Hover only where there is one: a touch screen keeps the last tapped segment hovered. */
+@media (hover: hover) {
+  .minesweeper__segmented button:not([aria-pressed='true']):hover {
+    background-color: color-mix(in srgb, var(--page-ink) 6%, transparent);
+  }
+}
+
+/* A difficulty's board size, under its name. */
+.minesweeper__size {
+  color: var(--page-muted);
+  font: 10.5px / 1.2 var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.minesweeper__difficulty button[aria-pressed='true'] {
+  background: var(--page-ink);
+  color: var(--page-ground);
+  cursor: default;
+}
+
+.minesweeper__difficulty button[aria-pressed='true'] .minesweeper__size {
+  color: inherit;
+  opacity: 0.7;
+}
+
+/*
+ * A world's segment: its flag, then its name, on one line in the middle of
+ * the group's height. The flag is the board's own glyph, from the world's
+ * tokens on the button, in the segment's ink.
+ */
+.minesweeper__world {
+  grid-auto-flow: column;
+  gap: 7px;
+  align-content: center;
+  align-items: center;
+  justify-content: center;
+}
+
+.minesweeper__world::before {
+  content: '';
+  width: 15px;
+  height: 15px;
+  background-color: currentColor;
+  opacity: 0.75;
+  mask-image: var(--flag-shape);
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+/*
+ * A world chosen is filled with its own colours, and its flag idles in its
+ * own colour as it does on the board: a glimpse of the stage.
+ */
+.minesweeper__world[aria-pressed='true'] {
+  background: var(--picker-color);
+  color: var(--ink);
+  cursor: default;
+}
+
+.minesweeper__world[aria-pressed='true']::before {
+  background-color: var(--flag-color);
+  opacity: 1;
+  transform-origin: var(--flag-origin);
+  animation: var(--flag-idle);
+}
+
+/*
+ * Forced colours (a high-contrast theme) paint every segment alike, which
+ * would hide the chosen one: it takes the system's highlight instead. A
+ * world's flag is a background, which the theme would paint the button's
+ * own colour: it keeps its ink.
+ */
+@media (forced-colors: active) {
+  .minesweeper__segmented button[aria-pressed='true'] {
+    background: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  .minesweeper__world::before {
+    forced-color-adjust: none;
+  }
+}
+
+/*
+ * Sound: an icon button, square and as tall as the groups: a segment's
+ * padding, its two lines (13px at 1.15, then 10.5px at 1.2) and a group's
+ * border. Its name is for screen readers; its state is in aria-pressed.
+ */
+
+/* No Web Audio, no Sound button (sound.ts): display would beat hidden. */
+.minesweeper__sound[hidden] {
+  display: none;
+}
+
+.minesweeper__sound {
+  display: grid;
+  place-items: center;
+  width: calc(2 * 8px + 13px * 1.15 + 10.5px * 1.2 + 2px);
+  aspect-ratio: 1;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--page-rule);
+  border-radius: 9px;
+  background: var(--control-color);
+  color: var(--page-ink);
+  cursor: pointer;
+  transition: background-color 0.12s;
+}
+
+/* The segments' tint, over the card: the button is its own card. */
+@media (hover: hover) {
+  .minesweeper__sound:hover {
+    background-color: color-mix(in srgb, var(--page-ink) 6%, var(--control-color));
+  }
+}
+
+.minesweeper__sound-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.minesweeper__speaker {
+  fill: currentColor;
+  fill-opacity: 0.14;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/*
+ * The waves and the cross draw along their length. Each stroke counts as 1
+ * long (pathLength: 1 for a wave, 2 for the cross, as the dash starts again
+ * at each of its strokes), so one dash shows it whole at offset 0 and hides
+ * it at offset 1. The gap after the dash is longer than the stroke: a dash
+ * starting where a hidden stroke ends would show as a dot, the round cap of a
+ * dash of no length. A stroke fades as it goes, for the same reason: the
+ * curve's slow end would leave its last bit there as a dot.
+ *
+ * Each way has its own order, so each state carries the delays of the change
+ * into it. Turning off, the large wave goes first, then the small, then the
+ * cross draws; turning on, the cross goes at once, then the waves draw
+ * outward. The large wave follows the small in the markup.
+ */
+.minesweeper__sound-wave,
+.minesweeper__sound-off {
+  stroke-dasharray: 1 2;
+}
+
+.minesweeper__sound-wave {
+  opacity: 0;
+  stroke-dashoffset: 1;
+  transition-delay: 0.04s;
+}
+
+.minesweeper__sound-wave + .minesweeper__sound-wave {
+  transition-delay: 0s;
+}
+
+.minesweeper__sound-off {
+  stroke-dashoffset: 0;
+  transition-delay: 0.14s;
+}
+
+.minesweeper__sound[aria-pressed='true'] .minesweeper__sound-wave {
+  opacity: 1;
+  stroke-dashoffset: 0;
+  transition-delay: 0.1s;
+}
+
+.minesweeper__sound[aria-pressed='true'] .minesweeper__sound-wave + .minesweeper__sound-wave {
+  transition-delay: 0.18s;
+}
+
+.minesweeper__sound[aria-pressed='true'] .minesweeper__sound-off {
+  opacity: 0;
+  stroke-dashoffset: 1;
+  transition-delay: 0s;
+}
+
+/*
+ * The icon moves only once the player has pressed it (sound.ts marks the
+ * button then): the remembered setting, shown as the page loads, appears as
+ * it is. Longhands, so the delays above stand.
+ */
+.minesweeper__sound[data-toggled] :is(.minesweeper__sound-wave, .minesweeper__sound-off) {
+  transition-property: stroke-dashoffset, opacity;
+  transition-duration: 0.24s;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The speaker thumps at each press: two names, so each press starts it again. */
+.minesweeper__sound[data-toggled][aria-pressed='true'] .minesweeper__speaker {
+  animation: sound-thump-on 0.3s ease-out;
+}
+
+.minesweeper__sound[data-toggled][aria-pressed='false'] .minesweeper__speaker {
+  animation: sound-thump-off 0.3s ease-out;
+}
+
+@keyframes sound-thump-on {
+  40% {
+    transform: scale(0.86);
+  }
+}
+
+@keyframes sound-thump-off {
+  40% {
+    transform: scale(0.86);
+  }
+}
+
+/* Read, not seen. */
+.minesweeper__visually-hidden {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/*
+ * A narrow game: the difficulty on a line of its own, the worlds and Sound
+ * under it, in the order the keyboard takes them; each group as wide as its
+ * place and its segments sharing it.
+ */
+@container minesweeper (width < 700px) {
+  .minesweeper__controls {
+    display: grid;
+    grid-template-areas:
+      'difficulty difficulty'
+      'world sound';
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .minesweeper__difficulty {
+    grid-area: difficulty;
+  }
+
+  .minesweeper__worlds {
+    grid-area: world;
+  }
+
+  .minesweeper__sound {
+    grid-area: sound;
+    margin-left: 0;
+  }
+
+  /*
+   * The segments share out their group's width, so their own padding only
+   * sets how narrow they may go: little, so the worlds still fit beside
+   * Sound on a phone.
+   */
+  .minesweeper__segmented button {
+    flex: 1 1 auto;
+    padding-inline: 4px;
+  }
+}
+
+/*
+ * On a phone a world's flag and name no longer fit on one line beside Sound
+ * (the four need 322 px, from a game about 380 px wide): the flag goes under
+ * the name, as a size goes under a difficulty, as tall as its line (10.5px at
+ * 1.2).
+ */
+@container minesweeper (width < 420px) {
+  .minesweeper__world {
+    grid-auto-flow: row;
+    gap: 0;
+    justify-items: center;
+  }
+
+  .minesweeper__world::before {
+    order: 1;
+    width: 12.6px;
+    height: 12.6px;
+  }
+}
+
+/* Narrower still (a 320 px phone), the worlds take the whole line: Sound goes under them. */
+@container minesweeper (width < 316px) {
+  .minesweeper__controls {
+    grid-template-areas:
+      'difficulty'
+      'world'
+      'sound';
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .minesweeper__sound {
+    justify-self: end;
+  }
+}
+
+/*
+ * New game, under the board: a quiet outline while a game is in play, the
+ * call to action once it is over. Its type is the world's (worlds/).
+ */
+
+.minesweeper__new-game {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+  padding: 8px 14px 8px 11px;
+  border: 1px solid color-mix(in srgb, var(--ink) 32%, transparent);
+  border-radius: var(--button-radius);
+  background: transparent;
+  color: var(--ink);
+  font: 500 13px var(--font-mono);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    color 0.12s,
+    opacity 0.25s,
+    transform 0.25s,
+    visibility 0.25s,
+    scale 0.1s;
+}
+
+.minesweeper__new-game-icon {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (hover: hover) {
+  .minesweeper__new-game:hover {
+    background-color: color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+
+  /* The arrow turns the way it points. */
+  .minesweeper__new-game:hover .minesweeper__new-game-icon {
+    transform: rotate(-140deg);
+  }
+}
+
+/* A press shows at once: scale, quicker than the transform that brings the button in. */
+.minesweeper__new-game:active {
+  scale: 0.97;
+}
+
+/*
+ * Before the first reveal there's nothing to leave: the board is already a
+ * new game. Hidden, not removed, so the message doesn't move when it comes;
+ * hidden from the keyboard too.
+ */
+.minesweeper__stage:not(
+    :has(.minesweeper__board:is([data-status='playing'], [data-status='won'], [data-status='lost']))
+  )
+  .minesweeper__new-game {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+/*
+ * On a narrow stage New game wraps under the message, onto a line of its own:
+ * hidden, it would leave that line empty. There it takes no room until it
+ * comes, with the first reveal.
+ */
+@container minesweeper (width < 680px) {
+  .minesweeper__stage:not(
+      :has(
+        .minesweeper__board:is([data-status='playing'], [data-status='won'], [data-status='lost'])
+      )
+    )
+    .minesweeper__new-game {
+    position: absolute;
+  }
+}
+
+/* Once the game is over, the way on: filled with the world's accent, and one pulse. */
+.minesweeper__stage:has(.minesweeper__board:is([data-status='won'], [data-status='lost']))
+  .minesweeper__new-game {
+  border-color: var(--accent);
+  background-color: var(--accent);
+  color: var(--ground);
+  animation: new-game-call 1.2s ease-out 0.5s;
+}
+
+@media (hover: hover) {
+  .minesweeper__stage:has(.minesweeper__board:is([data-status='won'], [data-status='lost']))
+    .minesweeper__new-game:hover {
+    background-color: color-mix(in srgb, var(--accent) 86%, var(--ink));
+  }
+}
+
+@keyframes new-game-call {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+
+  to {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+
+/*
+ * Motion off: no transitions, no animations; every state is already drawn as
+ * it ends. Important, as the site's own switch is: the state rules above
+ * weigh more than these.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .minesweeper__controls *,
+  .minesweeper__new-game,
+  .minesweeper__new-game * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

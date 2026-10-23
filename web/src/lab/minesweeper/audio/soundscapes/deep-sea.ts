@@ -2,7 +2,8 @@
  * The deep sea's four soundscapes, and the calls only it has. The
  * prototype's, verbatim (tmp/Minesweeper.html in the C repo).
  */
-import { randomBetween, withJitter, type AudioEngine } from '../audio-engine.ts';
+import { randomBetween, withJitter, type AudioEngine } from '../engine.ts';
+import { deepRumble } from './shared-calls.ts';
 import {
   drone,
   grains,
@@ -13,8 +14,7 @@ import {
   wander,
   type Scene,
   type Soundscape,
-} from '../soundscape.ts';
-import { deepRumble } from './shared-calls.ts';
+} from './soundscape.ts';
 
 /** Four whale calls, each a path of [hertz, seconds]. */
 const WHALE_CALLS: readonly (readonly (readonly [number, number])[])[] = [

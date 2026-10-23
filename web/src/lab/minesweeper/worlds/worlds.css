@@ -1,0 +1,40 @@
+/*
+ * The worlds: how the stage looks, as the prototype (tmp/Minesweeper.html in
+ * the C repo) draws its four, every value as it is there. One file per world,
+ * imported here in the order worlds.ts names them.
+ *
+ * Each file starts with its world's block of tokens, set on the stage and on
+ * the world's own button in the World picker, which wears its world's
+ * colours. Each block sets every token the parts read and nothing else
+ * (web/tests/worlds/worlds.test.ts checks each against what stage.css,
+ * board.css and controls.css read). A world sets the page's own names too
+ * (--ground, --ink, --muted, --rule), so the HUD, the message and New game
+ * take its colours as they are. The lengths the board's size is worked out
+ * from (--cell-gap, --board-padding) keep their unit at zero: calc() takes no
+ * bare 0 for a length.
+ *
+ * After the block come the world's extras, what isn't a token and belongs to
+ * its stage alone: the stage's light, its particles (what particles.ts adds
+ * to the stage's particle layer, each with its own numbers in custom
+ * properties), the board's texture, the grain of the revealed floor, the type
+ * of the HUD and of New game.
+ *
+ * The world's keyframes close its file: how a cover leaves as its cell is
+ * revealed, its flag's idle motion, the stage's slow layer, and its
+ * particles. A cover's own style is the end of its exit (opacity 0), all
+ * that shows with motion off; so each exit names its start, the tile as it
+ * stood. A particle's first motion is its life: it goes from where the
+ * particle starts to where it leaves, and particles.ts removes the particle
+ * as it ends. Its other motion (a sway, a hop) runs alongside, in transform.
+ * With motion off every layer stands still, and is drawn to look right so:
+ * the light at rest, the particle layer empty (particles.ts adds nothing).
+ *
+ * Every glyph is imported with ?no-inline: Vite would inline a small file as
+ * a data: URL, which the site's Content-Security-Policy (img-src 'self')
+ * refuses, and the flag or mine would not show.
+ */
+
+@import './deep-sea.css';
+@import './night-sky.css';
+@import './dune.css';
+@import './rainforest.css';

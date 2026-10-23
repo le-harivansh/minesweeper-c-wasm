@@ -4,4 +4,4 @@ build/
 web/node_modules/
 web/dist/
 web/.astro/
-web/src/lab/minesweeper/minesweeper.wasm
+web/src/lab/minesweeper/game/minesweeper.wasm

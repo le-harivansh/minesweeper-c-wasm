@@ -47,7 +47,7 @@ test('a first visit starts at Beginner, in deep sea, silent, with no best times'
 
   assert.equal(preferences.difficulty, 'beginner');
   assert.equal(preferences.world, 'deep-sea');
-  assert.equal(preferences.sound, false);
+  assert.equal(preferences.isSoundOn, false);
   assert.deepEqual(preferences.recordWin('beginner', 5_000), {
     timeMs: 5_000,
     previousBestMs: null,
@@ -73,7 +73,7 @@ test('the difficulty, world, sound and best times come back on the next visit', 
 
   assert.equal(nextVisit.difficulty, 'expert');
   assert.equal(nextVisit.world, 'dune');
-  assert.equal(nextVisit.sound, true);
+  assert.equal(nextVisit.isSoundOn, true);
   assert.equal(nextVisit.recordWin('intermediate', 100_000).previousBestMs, 90_000);
 });
 
@@ -117,7 +117,7 @@ test('what was stored wrongly is ignored', () => {
   assert.equal(garbled.difficulty, 'beginner');
   assert.equal(mixed.difficulty, 'beginner');
   assert.equal(mixed.world, 'deep-sea');
-  assert.equal(mixed.sound, false);
+  assert.equal(mixed.isSoundOn, false);
   assert.equal(loadPreferences(fakeStorage('{"world": 42}')).world, 'deep-sea');
   assert.equal(mixed.recordWin('beginner', 1_000).previousBestMs, null);
   assert.equal(mixed.recordWin('intermediate', 50_000).previousBestMs, 42_000);
@@ -156,7 +156,7 @@ test('without working storage, preferences last for the visit', () => {
 
     assert.equal(preferences.difficulty, 'intermediate');
     assert.equal(preferences.world, 'rainforest');
-    assert.equal(preferences.sound, true);
+    assert.equal(preferences.isSoundOn, true);
     assert.equal(preferences.recordWin('intermediate', 40_000).previousBestMs, 30_000);
     assert.equal(preferences.soundscape('dune'), 'storm-edge');
   }

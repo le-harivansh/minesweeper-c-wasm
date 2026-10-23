@@ -3,26 +3,28 @@
  * The game. Its only public entry: the Lab entry's MDX mounts it.
  *
  * Renders every part but the cells: the controls (the difficulty, the world,
- * sound), then the stage with its air (an empty layer under the rest, which
- * ambience.ts fills), the HUD, an empty board, the message line and New game.
+ * sound), then the stage with its particle layer (empty, under the rest,
+ * which particles.ts fills), the HUD, an empty board, the message line and
+ * New game.
  * main.ts loads the game into them once it nears the viewport; until then the
  * board is busy and the HUD shows no numbers. The scripts find each part by
  * its class.
  *
  * The controls are one row, as in the prototype: the difficulty and the world
  * as two segmented groups, then Sound. A world's segment shows its flag before
- * its name: the board's own glyph, which worlds.css sets on the button with
- * the rest of its tokens. Sound is an icon alone: its name is for screen
+ * its name: the board's own glyph, which its world's stylesheet sets on the
+ * button with the rest of its tokens. Sound is an icon alone: its name is for screen
  * readers, its state in aria-pressed. Its icon and New game's are drawn here
  * and set in motion by controls.css.
  *
  * The stage starts in the first world; main.ts paints the one the player
  * chose last as soon as it runs, before the game loads.
  */
-import './minesweeper.css';
-import './controls.css';
-import './worlds.css';
-import { WORLD_LABELS, WORLD_NAMES } from './worlds.ts';
+import './ui/stage.css';
+import './board/board.css';
+import './ui/controls.css';
+import './worlds/worlds.css';
+import { WORLD_LABELS, WORLD_NAMES } from './worlds/worlds.ts';
 
 // The Sound icon, on a 24-unit grid: the speaker, its waves and the cross it
 // shows when off. controls.css draws the waves in turn, the small one (first
@@ -88,7 +90,7 @@ const CROSS = 'M15.7 9.3l5.4 5.4M21.1 9.3l-5.4 5.4';
   </div>
 
   <div class="minesweeper__stage" data-world={WORLD_NAMES[0]}>
-    <div class="minesweeper__ambience" aria-hidden="true"></div>
+    <div class="minesweeper__particles" aria-hidden="true"></div>
 
     <div class="minesweeper__hud">
       <p class="minesweeper__stat">

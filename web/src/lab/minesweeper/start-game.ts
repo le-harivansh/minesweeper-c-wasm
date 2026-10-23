@@ -11,14 +11,14 @@
  * play, and recording a win's time. The world isn't the game's: main.ts runs
  * it (worlds.ts).
  */
-import { createBoardView } from './board-view.ts';
-import { createControls } from './controls.ts';
-import { DIFFICULTY, loadGameCore, type DifficultyName } from './game-core.ts';
-import { createGameSession } from './game-session.ts';
-import { createHud } from './hud.ts';
-import { attachInput } from './input.ts';
+import type { Sound } from './audio/sound.ts';
+import { createBoardView } from './board/board-view.ts';
+import { attachInput } from './board/input.ts';
+import { DIFFICULTY, loadGameCore, type DifficultyName } from './game/core.ts';
+import { createGameSession } from './game/session.ts';
 import type { Preferences } from './preferences.ts';
-import type { Sound } from './sound.ts';
+import { createControls } from './ui/controls.ts';
+import { createHud } from './ui/hud.ts';
 
 /**
  * @param wasm The module's response; main.ts starts the download before this
@@ -35,7 +35,7 @@ export async function startGame(
   const core = await loadGameCore(wasm);
   let difficulty = preferences.difficulty;
   // The page's first game is dealt in silence, as the prototype's is.
-  let firstGameDealt = false;
+  let isFirstGameDealt = false;
 
   // The session calls onMove only after a command, and the first command
   // comes once the views exist.
@@ -50,7 +50,7 @@ export async function startGame(
       }
 
       // Last, and guarded: the sound never stops the game.
-      if (firstGameDealt) {
+      if (isFirstGameDealt) {
         try {
           sound.playMove(move, session.board);
         } catch (error) {
@@ -86,5 +86,5 @@ export async function startGame(
   }
 
   newGame(difficulty);
-  firstGameDealt = true;
+  isFirstGameDealt = true;
 }

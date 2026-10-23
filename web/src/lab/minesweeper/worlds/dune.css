@@ -1,0 +1,198 @@
+/*
+ * Dune: lit sand above, the umber shadow face where you clear. Its tokens,
+ * its extras, then its motion; worlds.css says what each part holds.
+ */
+
+:is(.minesweeper__stage, .minesweeper__world)[data-world='dune'] {
+  --ground: #d9b778;
+  --ink: #3b2814;
+  --muted: rgba(59, 40, 20, 0.6);
+  --rule: rgba(59, 40, 20, 0.16);
+
+  --accent: #2b3a8f;
+  --ring-color: rgba(194, 80, 42, 0.55);
+  --glow-color: rgba(255, 236, 190, 0.75);
+
+  --board-color: #ddbc7e;
+  --board-radius: 0;
+  --board-padding: 0px;
+  --board-outline-color: rgba(59, 40, 20, 0.28);
+
+  --tile-color: rgba(255, 245, 220, 0.1);
+  --tile-hover-color: rgba(255, 245, 220, 0.34);
+  --tile-pressed-color: rgba(59, 40, 20, 0.14);
+  --tile-border: 1px solid rgba(59, 40, 20, 0.13);
+  --revealed-color: #4a3220;
+  --revealed-shadow: none;
+  --revealed-fade: floor-fade 0.36s ease-out;
+  --cell-radius: 0;
+  --cell-gap: 0px;
+
+  --number-1-color: #f1ddb0;
+  --number-2-color: #e8b86a;
+  --number-3-color: #e07a4a;
+  --number-4-color: #b9a9e8;
+  --number-5-color: #e25a4a;
+  --number-6-color: #8fc9c0;
+  --number-7-color: #ffffff;
+  --number-8-color: #ff9c8a;
+  --number-font: var(--font-sans);
+  --number-weight: 600;
+  --number-width: 75%;
+  --number-scale: 0.6;
+  --hud-weight: 300;
+  --hud-letter-spacing: 0;
+
+  --flag-color: #2b3a8f;
+  --flag-shape: url('../assets/glyphs/pennant.svg?no-inline');
+  --flag-inset: 14%;
+  --flag-origin: 28% 100%;
+  --flag-idle: flag-lean 1.4s ease-in-out infinite alternate;
+  --mine-color: #3b2814;
+  --mine-shape: url('../assets/glyphs/burr.svg?no-inline');
+  --exploded-color: #c2502a;
+  --exploded-mine-color: #f1ddb0;
+  /* Crossed out in a desert sign's red on sun-bleached white: the one light halo. */
+  --wrong-flag-color: #b3261e;
+  --wrong-flag-halo-color: #f6e9cc;
+  --cover-exit: cover-blow 0.36s cubic-bezier(0.55, 0, 0.8, 0.6);
+  --cover-origin: 0% 100%;
+
+  --button-radius: 2px;
+  --picker-color: #d9b778;
+}
+
+/* Wind ripples in the sand (the tiles are nearly clear), drifting a few pixels a second. */
+.minesweeper__stage[data-world='dune'] .minesweeper__board {
+  background-image:
+    repeating-linear-gradient(112deg, transparent 0 6px, rgba(59, 40, 20, 0.12) 6px 6.6px),
+    repeating-radial-gradient(
+      ellipse 60% 30% at 20% 110%,
+      transparent 0 28px,
+      rgba(59, 40, 20, 0.09) 28px 29px
+    ),
+    repeating-radial-gradient(
+      ellipse 70% 32% at 85% -10%,
+      transparent 0 34px,
+      rgba(59, 40, 20, 0.07) 34px 35px
+    );
+  background-position:
+    0 0,
+    0 0,
+    0 0;
+}
+
+/* Not once the board is won: then it blooms, as in every world. */
+.minesweeper__stage[data-world='dune'] .minesweeper__board:not([data-status='won']) {
+  animation: sand-drift 70s linear infinite;
+}
+
+.minesweeper__stage[data-world='dune'] .minesweeper__cell[data-state='revealed'] {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 0.6px, transparent 1.1px);
+  background-size: 7px 7px;
+}
+
+/*
+ * Sand on the wind, blown in at the stage's left edge and out past its right,
+ * hopping: umber grains, sunlit ones, and streaks, which a gust sends in a
+ * burst (particles.ts).
+ */
+.minesweeper__stage[data-world='dune'] .minesweeper__particles {
+  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+}
+
+.minesweeper__stage[data-world='dune'] .minesweeper__grain {
+  --grain-color: #3b2814;
+
+  top: var(--y);
+  left: 0;
+  width: var(--length);
+  height: var(--thickness);
+  border-radius: 999px;
+  background: var(--grain-color);
+  opacity: var(--opacity);
+  translate: -100% 0;
+  animation:
+    grain-blow var(--duration) linear var(--delay) both,
+    grain-hop var(--hop-duration) ease-in-out var(--delay) infinite alternate;
+}
+
+.minesweeper__stage[data-world='dune'] .minesweeper__grain--light {
+  --grain-color: #fff4d6;
+}
+
+/* A streak: a grain blown fast, its trail behind it. */
+.minesweeper__stage[data-world='dune'] .minesweeper__grain--streak {
+  background: linear-gradient(90deg, transparent, var(--grain-color));
+}
+
+/* A tall, narrow counter; New game stencilled. */
+.minesweeper__stage[data-world='dune'] .minesweeper__number {
+  font-size: calc(var(--hud-number-size) * 1.15);
+  font-stretch: 62%;
+}
+
+.minesweeper__stage[data-world='dune'] .minesweeper__new-game {
+  font-family: var(--font-sans);
+  font-stretch: 75%;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ---------- Motion ---------- */
+
+/* How a cover leaves as its cell is revealed. */
+@keyframes cover-blow {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(34%) skewX(-14deg) scaleY(0.88);
+  }
+}
+
+/* The flag's idle motion. */
+@keyframes flag-lean {
+  from {
+    transform: rotate(-2deg) skewX(-5deg);
+  }
+
+  to {
+    transform: rotate(3deg) skewX(6deg);
+  }
+}
+
+/* The stage's slow layer. */
+@keyframes sand-drift {
+  to {
+    background-position:
+      160px 0,
+      0 0,
+      0 0;
+  }
+}
+
+/* The particles. From just left of the stage to just past its right edge. */
+@keyframes grain-blow {
+  from {
+    translate: -100% 0;
+  }
+
+  to {
+    translate: 100cqw 0;
+  }
+}
+
+@keyframes grain-hop {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(var(--hop));
+  }
+}

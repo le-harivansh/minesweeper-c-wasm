@@ -2,9 +2,9 @@
  * Starts every game on the page. The page shows the game's static parts
  * without this; once a game nears the viewport, this downloads the module
  * and, side by side, the rest of the game's code (start-game.ts, its own
- * chunk), then starts it. The air round the board (ambience.ts) comes then
- * too, in a chunk of its own: it belongs to the stage, not the game, so it
- * moves even if the game fails to load.
+ * chunk), then starts it. The particles round the board (particles.ts)
+ * come then too, in a chunk of its own: they belong to the stage, not the
+ * game, so they move even if the game fails to load.
  *
  * The world and the sound come first, at once: each stage is painted in the
  * world chosen last before its game loads, so it doesn't change colour as it
@@ -16,13 +16,13 @@
  * Content-Security-Policy blocks inline scripts.
  */
 
+import { attachSound, type Sound } from './audio/sound.ts';
 // no-inline: Vite inlines a file under 4 KiB into the script as a data: URL,
 // which the site's policy won't fetch (connect-src 'self'). As its own file,
 // the module is cached on its own and compiles while it downloads.
-import wasmUrl from './minesweeper.wasm?url&no-inline';
+import wasmUrl from './game/minesweeper.wasm?url&no-inline';
 import { browserStorage, loadPreferences, type Preferences } from './preferences.ts';
-import { attachSound, type Sound } from './sound.ts';
-import { attachWorlds } from './worlds.ts';
+import { attachWorlds } from './worlds/worlds.ts';
 
 /** How far below the viewport a game starts loading. */
 const LOAD_MARGIN = '200px';
@@ -48,8 +48,8 @@ for (const root of document.querySelectorAll<HTMLElement>('.minesweeper')) {
       }
 
       observer.disconnect();
-      import('./ambience.ts')
-        .then(({ attachAmbience }) => attachAmbience(root))
+      import('./worlds/particles.ts')
+        .then(({ attachParticles }) => attachParticles(root))
         .catch((error: unknown) => console.error(error));
       start(root, preferences, sound).catch((error: unknown) => {
         const message = root.querySelector('.minesweeper__message');

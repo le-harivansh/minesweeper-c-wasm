@@ -2,8 +2,9 @@
  * The dune's four soundscapes, and the calls only it has. The prototype's,
  * verbatim (tmp/Minesweeper.html in the C repo).
  */
-import { randomBetween, type AudioEngine } from '../audio-engine.ts';
-import { D_HIJAZ } from '../sound-effects.ts';
+import { randomBetween, type AudioEngine } from '../engine.ts';
+import { D_HIJAZ } from '../sfx.ts';
+import { chorusVoice, deepRumble, rockTick } from './shared-calls.ts';
 import {
   drone,
   grains,
@@ -12,8 +13,7 @@ import {
   room,
   wander,
   type Soundscape,
-} from '../soundscape.ts';
-import { chorusVoice, deepRumble, rockTick } from './shared-calls.ts';
+} from './soundscape.ts';
 
 /** A hawk far overhead. */
 function hawk(engine: AudioEngine, at: number, output: AudioNode): void {

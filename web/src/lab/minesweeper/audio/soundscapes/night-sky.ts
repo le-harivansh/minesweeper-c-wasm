@@ -2,7 +2,8 @@
  * The night sky's four soundscapes, and the calls only it has. The
  * prototype's, verbatim (tmp/Minesweeper.html in the C repo).
  */
-import { randomBetween, withJitter, type AudioEngine } from '../audio-engine.ts';
+import { randomBetween, withJitter, type AudioEngine } from '../engine.ts';
+import { chorusVoice, frog, owl, rockTick } from './shared-calls.ts';
 import {
   drone,
   grains,
@@ -11,8 +12,7 @@ import {
   room,
   wander,
   type Soundscape,
-} from '../soundscape.ts';
-import { chorusVoice, frog, owl, rockTick } from './shared-calls.ts';
+} from './soundscape.ts';
 
 /** A star twinkling: one of C7, E7, G7, from somewhere in the room `far`. */
 function twinkle(engine: AudioEngine, at: number, far: AudioNode, gain: number): void {

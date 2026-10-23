@@ -1,0 +1,189 @@
+/*
+ * Rainforest: canopy above, the forest floor where you clear. Its tokens,
+ * its extras, then its motion; worlds.css says what each part holds.
+ */
+
+:is(.minesweeper__stage, .minesweeper__world)[data-world='rainforest'] {
+  --ground: #0f2e22;
+  --ink: #e6f2e4;
+  --muted: rgba(230, 242, 228, 0.55);
+  --rule: rgba(230, 242, 228, 0.14);
+
+  --accent: #f6d86b;
+  --ring-color: rgba(246, 216, 107, 0.6);
+  --glow-color: rgba(159, 227, 176, 0.4);
+
+  --board-color: #0f2e22;
+  --board-radius: 5px;
+  --board-padding: 2px;
+  --board-outline-color: rgba(159, 227, 176, 0.12);
+
+  --tile-color: #2f6a48;
+  --tile-hover-color: #3a7d57;
+  --tile-pressed-color: #24533a;
+  --tile-border: 0;
+  --revealed-color: #1a2b20;
+  --revealed-shadow: inset 0 0 0 1px rgba(159, 227, 176, 0.06);
+  --revealed-fade: floor-fade 0.4s ease-out;
+  --cell-radius: 3px;
+  --cell-gap: 2px;
+
+  --number-1-color: #9fe3b0;
+  --number-2-color: #f6d86b;
+  --number-3-color: #ff9a5c;
+  --number-4-color: #f26b8a;
+  --number-5-color: #e84b4b;
+  --number-6-color: #5fd4f0;
+  --number-7-color: #ffffff;
+  --number-8-color: #c68cff;
+  --number-font: var(--font-sans);
+  --number-weight: 700;
+  --number-width: 88%;
+  --number-scale: 0.58;
+  --hud-weight: 700;
+  --hud-letter-spacing: -0.02em;
+
+  --flag-color: #ff4f5e;
+  --flag-shape: url('../assets/glyphs/leaf.svg?no-inline');
+  --flag-inset: 15%;
+  --flag-origin: 20% 100%;
+  --flag-idle: flag-sway 3.6s ease-in-out infinite alternate;
+  --mine-color: #f6b26b;
+  --mine-shape: url('../assets/glyphs/seed-pod.svg?no-inline');
+  --exploded-color: #ff6b3d;
+  --exploded-mine-color: #ffffff;
+  /* Crossed out in yellow on black, the forest's own warning (poison dart frogs, wasps). */
+  --wrong-flag-color: #ffd60a;
+  --wrong-flag-halo-color: #0a140e;
+  --cover-exit: cover-curl 0.42s cubic-bezier(0.5, 0, 0.7, 0.4);
+  --cover-origin: 50% 0%;
+
+  --button-radius: 8px;
+  --picker-color: #0f2e22;
+}
+
+.minesweeper__stage[data-world='rainforest'] {
+  background: linear-gradient(180deg, #163f2e 0%, #0f2e22 55%, #0a2017 100%);
+}
+
+/* Light through the trees, drifting. */
+.minesweeper__stage[data-world='rainforest']::before {
+  background:
+    radial-gradient(20% 24% at 28% 22%, rgba(246, 216, 107, 0.13), transparent 70%),
+    radial-gradient(16% 20% at 72% 56%, rgba(159, 227, 176, 0.11), transparent 70%),
+    radial-gradient(24% 22% at 52% 88%, rgba(246, 216, 107, 0.07), transparent 70%);
+  animation: dapple-drift 28s ease-in-out infinite alternate;
+}
+
+/*
+ * Drips off the canopy: a drop falls from over the stage to --land above its
+ * foot, quicker as it goes; where it lands a ring spreads, and a smaller one
+ * a moment after, seen at a slant (particles.ts).
+ */
+.minesweeper__stage[data-world='rainforest'] .minesweeper__drip {
+  top: 0;
+  left: var(--x);
+  width: 2px;
+  height: var(--length);
+  margin-left: -1px;
+  border-radius: 1px 1px 2px 2px / 1px 1px 3px 3px;
+  background: linear-gradient(to bottom, transparent, rgba(222, 245, 228, 0.95));
+  opacity: var(--opacity);
+  translate: 0 -100%;
+  animation: drip-fall var(--duration) cubic-bezier(0.55, 0, 1, 0.45) var(--delay) both;
+}
+
+.minesweeper__stage[data-world='rainforest'] .minesweeper__splash {
+  bottom: var(--land);
+  left: var(--x);
+  box-sizing: border-box;
+  width: var(--size);
+  height: calc(var(--size) * 0.34);
+  margin: 0 0 calc(var(--size) * -0.17) calc(var(--size) / -2);
+  border: 1px solid rgba(222, 245, 228, 0.85);
+  border-radius: 50%;
+  opacity: 0;
+  animation: splash-ring var(--duration) ease-out both;
+}
+
+.minesweeper__stage[data-world='rainforest'] .minesweeper__splash::after {
+  content: '';
+  position: absolute;
+  inset: 22%;
+  border: 1px solid rgba(222, 245, 228, 0.6);
+  border-radius: 50%;
+  animation: splash-ring var(--duration) ease-out 0.1s both;
+}
+
+/* The depth a tile curls back through. */
+.minesweeper__stage[data-world='rainforest'] .minesweeper__cell {
+  perspective: 260px;
+}
+
+.minesweeper__stage[data-world='rainforest'] .minesweeper__cell[data-state='revealed'] {
+  background-image: radial-gradient(rgba(159, 227, 176, 0.16) 0.7px, transparent 1.2px);
+  background-size: 7px 7px;
+}
+
+.minesweeper__stage[data-world='rainforest'] .minesweeper__new-game {
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+/* ---------- Motion ---------- */
+
+/* How a cover leaves as its cell is revealed. */
+@keyframes cover-curl {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: perspective(260px) rotateX(-88deg);
+  }
+}
+
+/* The flag's idle motion. */
+@keyframes flag-sway {
+  from {
+    transform: rotate(-4deg);
+  }
+
+  to {
+    transform: rotate(4deg);
+  }
+}
+
+/* The stage's slow layer. */
+@keyframes dapple-drift {
+  to {
+    transform: translate(3%, -2%) scale(1.05);
+  }
+}
+
+/* The particles. A drop falls from the canopy, and splashes where it lands. */
+@keyframes drip-fall {
+  from {
+    translate: 0 -100%;
+    scale: 1 0.6;
+  }
+
+  to {
+    translate: 0 calc(100cqh - var(--land) - 100%);
+    scale: 1 1.25;
+  }
+}
+
+@keyframes splash-ring {
+  from {
+    opacity: var(--opacity);
+    scale: 0.2;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1;
+  }
+}

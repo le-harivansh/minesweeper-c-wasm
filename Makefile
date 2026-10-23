@@ -63,23 +63,25 @@ $(BUILD)/tests: $(CORE) $(wildcard tests/*.c src/*.h tests/*.h) Makefile | $(BUI
 # declared as an import, so a stray libc call (memcpy, say) fails the link.
 # It also refreshes the harness's copy, so with `make dev` running, `make
 # wasm` in another terminal reloads the page.
-wasm: $(BUILD)/minesweeper.wasm $(GAME)/minesweeper.wasm
+wasm: $(BUILD)/minesweeper.wasm $(GAME)/game/minesweeper.wasm
 
 $(BUILD)/minesweeper.wasm: $(CORE) src/minesweeper.c $(wildcard src/*.h) Makefile | $(BUILD)
 	$(CC) $(CFLAGS) $(WASM_FLAGS) -o $@ $(filter %.c,$^)
 
 # The game's folder imports nothing from outside itself, so it gets its own
-# copy of the module (git ignores it). $< is the first prerequisite.
-$(GAME)/minesweeper.wasm: $(BUILD)/minesweeper.wasm
+# copy of the module (git ignores it), beside core.ts, the one file that
+# knows it. $< is the first prerequisite.
+$(GAME)/game/minesweeper.wasm: $(BUILD)/minesweeper.wasm
 	cp $< $@
 
 # Tests the built module in Node, loaded the way the browser will load it:
 # its exports and imports, and that each event reaches its JS function. Then
-# every test of the game's TypeScript in web/tests/: game-core.ts over the
-# same module, the rest with no module at all (Node runs TypeScript as is,
-# with no build step).
+# every test of the game's TypeScript in web/tests/, whose folders mirror the
+# game's: game/core.ts over the same module, the rest with no module at all
+# (Node runs TypeScript as is, with no build step). The glob is quoted, so
+# Node expands it, ** and all, rather than the shell.
 test-wasm: $(BUILD)/minesweeper.wasm
-	node --test tests/minesweeper.test.mjs web/tests/*.test.ts
+	node --test tests/minesweeper.test.mjs 'web/tests/**/*.test.ts'
 
 # The harness's packages, installed again whenever package.json or the
 # lockfile changes. --frozen-lockfile installs exactly what the lockfile says
@@ -106,4 +108,4 @@ $(BUILD):
 # Also removes build/tests.dSYM, where macOS puts -g's debug info, and the
 # harness's build, its cache and its copy of the module (its packages stay).
 clean:
-	rm -rf $(BUILD) web/dist web/.astro $(GAME)/minesweeper.wasm
+	rm -rf $(BUILD) web/dist web/.astro $(GAME)/game/minesweeper.wasm

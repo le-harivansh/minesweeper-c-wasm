@@ -7,8 +7,8 @@
  * A call plays at `at`, into `output`: usually a panner in front of the
  * scene, or in front of its room for one far off.
  */
-import { randomBetween, withJitter, type AudioEngine } from '../audio-engine.ts';
-import { grains, type Scene } from '../soundscape.ts';
+import { randomBetween, withJitter, type AudioEngine } from '../engine.ts';
+import { grains, type Scene } from './soundscape.ts';
 
 /** A long, low swell of brown noise: pressure, or a far-off wall of sand. */
 export function deepRumble(engine: AudioEngine, at: number, output: AudioNode): void {

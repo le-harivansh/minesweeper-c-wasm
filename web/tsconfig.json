@@ -3,7 +3,7 @@
   "include": [".astro/types.d.ts", "**/*"],
   "exclude": ["dist"],
   "compilerOptions": {
-    // Node runs the tests (and game-core.ts with them) by stripping the
+    // Node runs the tests (and game/core.ts with them) by stripping the
     // types, which works only for syntax that is types alone: no enums, no
     // namespaces, no parameter properties. This makes TypeScript refuse the rest.
     "erasableSyntaxOnly": true

@@ -1,0 +1,230 @@
+/*
+ * The game's styles, the stage's part: the game's own type, the stage, the
+ * particle layer, the HUD, and the message under the board. Global, not
+ * scoped: the cells are made by script, which Astro's scoped styles never
+ * reach. Every selector sits under .minesweeper, so nothing leaks onto the
+ * page. The board is board.css's; the controls above the stage, and New
+ * game, are controls.css's.
+ *
+ * The parts read tokens only, never a colour: the stage takes its world's,
+ * which the world's own file in worlds/ sets on it under the page's own names
+ * (--ground, --ink, --muted, --rule) and the game's (--tile-color,
+ * --cover-exit, …).
+ *
+ * The look and the motion are the prototype's (tmp/Minesweeper.html in the C
+ * repo), its values as they are. Every animation ends where the element's own
+ * style already is: what appears animates from hidden to its style, what
+ * leaves has its hidden end as its style. With motion off (the end of this
+ * file, and the site turns every animation off too), the game shows the same
+ * state, at once.
+ */
+
+/*
+ * The game's own Plex Mono weights: the site ships 400 and 500. Deep sea's
+ * counter is light (300) and a message's bold is 600, as in the prototype.
+ * The browser fetches each only when something uses it.
+ */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300;
+  src: url('../assets/fonts/ibm-plex-mono-latin-300-normal.woff2?no-inline') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('../assets/fonts/ibm-plex-mono-latin-600-normal.woff2?no-inline') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* The controls lay themselves out by the game's width, not the window's. */
+.minesweeper {
+  container: minesweeper / inline-size;
+  display: grid;
+  gap: 18px;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+}
+
+/*
+ * The stage: HUD, board, message and New game, in its world's colours. A
+ * world's light lies in ::before and its particles (particles.ts) in the
+ * layer over it, both under the parts: what moves there passes behind the
+ * board and shows around it.
+ */
+
+.minesweeper__stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 20px 20px 18px;
+  border-radius: 16px;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+.minesweeper__stage::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.minesweeper__stage > * {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * The particle layer: the stage's size, and a size container, so a particle's
+ * path can be the stage's height or width (100cqh, 100cqw). Each world draws
+ * its own particles (its file in worlds/).
+ */
+.minesweeper__stage > .minesweeper__particles {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+  container-type: size;
+}
+
+.minesweeper__particles > * {
+  position: absolute;
+}
+
+/* The HUD: mines left, the status over the progress bar, the time. */
+
+.minesweeper__hud {
+  --hud-number-size: 40px;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.minesweeper__stat {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.minesweeper__stat--time {
+  text-align: right;
+}
+
+.minesweeper__label {
+  color: var(--muted);
+  font: 500 11px / 1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* The HUD's numbers are set like the board's, at the world's own weight. */
+.minesweeper__number {
+  font-family: var(--number-font);
+  font-size: var(--hud-number-size);
+  font-stretch: var(--number-width);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--hud-weight);
+  letter-spacing: var(--hud-letter-spacing);
+  line-height: 0.95;
+}
+
+.minesweeper__progress-area {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  align-self: flex-end;
+  min-width: 140px;
+  max-width: 360px;
+  padding-bottom: 6px;
+}
+
+.minesweeper__progress {
+  overflow: hidden;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--rule);
+}
+
+.minesweeper__progress::before {
+  content: '';
+  display: block;
+  width: calc(var(--progress, 0) * 100%);
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* On a phone the three keep to one line: smaller numbers, a shorter bar. */
+@media (max-width: 540px) {
+  .minesweeper__hud {
+    --hud-number-size: 32px;
+
+    gap: 12px;
+  }
+
+  .minesweeper__progress-area {
+    min-width: 72px;
+  }
+}
+
+/* Under the board: the message, and New game once there's a game to leave. */
+
+.minesweeper__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+/*
+ * The message takes the room New game leaves it: one line where that's
+ * enough, and lines of even length where it isn't, which breaks the ready
+ * message between its two sentences. Where the room is narrower than the
+ * longer of them (45 characters), New game goes under it instead. (The
+ * prototype held it to 62 characters, so the ready message, 89, always broke
+ * mid-sentence.)
+ */
+.minesweeper__message {
+  flex: 1 1 45ch;
+  margin: 0;
+  color: var(--muted);
+  font: 13px / 1.45 var(--font-mono);
+  text-wrap: balance;
+}
+
+/* Where the mine was, how long a clear took. */
+.minesweeper__message b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Motion off: every part is already drawn as it ends. */
+@media (prefers-reduced-motion: reduce) {
+  .minesweeper *,
+  .minesweeper *::before,
+  .minesweeper *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -1,0 +1,183 @@
+/*
+ * Deep sea: a bathymetric chart. Its tokens, its extras, then its motion;
+ * worlds.css says what each part holds.
+ */
+
+:is(.minesweeper__stage, .minesweeper__world)[data-world='deep-sea'] {
+  --ground: #071e2f;
+  --ink: #d6eef5;
+  --muted: rgba(214, 238, 245, 0.55);
+  --rule: rgba(214, 238, 245, 0.14);
+
+  --accent: #58e6d9;
+  --ring-color: rgba(255, 92, 122, 0.7);
+  --glow-color: rgba(88, 230, 217, 0.45);
+
+  --board-color: #0a2a42;
+  --board-radius: 4px;
+  --board-padding: 0px;
+  --board-outline-color: rgba(88, 230, 217, 0.22);
+
+  --tile-color: rgba(14, 66, 98, 0.78);
+  --tile-hover-color: rgba(22, 92, 132, 0.85);
+  --tile-pressed-color: rgba(9, 44, 66, 0.95);
+  --tile-border: 1px solid rgba(88, 230, 217, 0.12);
+  --revealed-color: #04131f;
+  --revealed-shadow: inset 0 0 0 1px rgba(88, 230, 217, 0.08);
+  --revealed-fade: floor-fade 0.36s ease-out;
+  --cell-radius: 2px;
+  --cell-gap: 1px;
+
+  --number-1-color: #58e6d9;
+  --number-2-color: #7cf2a6;
+  --number-3-color: #ffd166;
+  --number-4-color: #b8a1ff;
+  --number-5-color: #ff8e72;
+  --number-6-color: #4ad0ff;
+  --number-7-color: #f5f7fa;
+  --number-8-color: #ff5c7a;
+  --number-font: var(--font-mono);
+  --number-weight: 500;
+  --number-width: 100%;
+  --number-scale: 0.5;
+  --hud-weight: 300;
+  --hud-letter-spacing: -0.03em;
+
+  --flag-color: #ff9f43;
+  --flag-shape: url('../assets/glyphs/buoy.svg?no-inline');
+  --flag-inset: 16%;
+  --flag-origin: 50% 60%;
+  --flag-idle: flag-bob 3.2s ease-in-out infinite alternate;
+  --mine-color: #ff5c7a;
+  --mine-shape: url('../assets/glyphs/sea-mine.svg?no-inline');
+  --exploded-color: #ff3d5a;
+  --exploded-mine-color: #ffffff;
+  /* Crossed out in chart magenta: nautical charts print their hazards in it. */
+  --wrong-flag-color: #ff4fd8;
+  --wrong-flag-halo-color: #04131f;
+  --cover-exit: cover-sink 0.36s cubic-bezier(0.4, 0, 0.6, 1);
+  --cover-origin: 50% 50%;
+
+  --button-radius: 3px;
+  /* The water, as its tiles show it: on a button the ground reads as the night sky's. */
+  --picker-color: #0d3d5b;
+}
+
+.minesweeper__stage[data-world='deep-sea'] {
+  background: linear-gradient(180deg, #0b2c44 0%, #071e2f 45%, #040f19 100%);
+}
+
+/* Caustic light on the water, drifting. */
+.minesweeper__stage[data-world='deep-sea']::before {
+  background:
+    radial-gradient(42% 32% at 18% 18%, rgba(88, 230, 217, 0.08), transparent 70%),
+    radial-gradient(36% 30% at 78% 62%, rgba(88, 230, 217, 0.06), transparent 70%);
+  animation: caustics-drift 30s ease-in-out infinite alternate;
+}
+
+/*
+ * Bubbles rising from under the stage to over it, swaying: clear rings with a
+ * glint, faded in at the stage's foot and out at its surface. The prototype's
+ * four, 26 seconds apart, lay under the board, which hid them: here they're
+ * many, each its own size and speed (particles.ts).
+ */
+.minesweeper__stage[data-world='deep-sea'] .minesweeper__particles {
+  mask-image: linear-gradient(to bottom, transparent, #000 8%, #000 90%, transparent);
+}
+
+.minesweeper__stage[data-world='deep-sea'] .minesweeper__bubble {
+  top: 100%;
+  left: var(--x);
+  width: var(--size);
+  height: var(--size);
+  margin-left: calc(var(--size) / -2);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, 0.75) 0 12%, transparent 32%),
+    rgba(214, 238, 245, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(214, 238, 245, 0.8);
+  opacity: var(--opacity);
+  animation:
+    bubble-rise var(--duration) linear var(--delay) both,
+    bubble-sway var(--sway-duration) ease-in-out var(--delay) infinite alternate;
+}
+
+/* Depth contours under the water (the tiles are slightly clear). */
+.minesweeper__stage[data-world='deep-sea'] .minesweeper__board {
+  background-image:
+    repeating-radial-gradient(
+      circle at 22% 70%,
+      transparent 0 14px,
+      rgba(88, 230, 217, 0.22) 14px 15px
+    ),
+    repeating-radial-gradient(
+      circle at 76% 18%,
+      transparent 0 19px,
+      rgba(88, 230, 217, 0.17) 19px 20px
+    ),
+    repeating-radial-gradient(
+      circle at 50% 100%,
+      transparent 0 26px,
+      rgba(88, 230, 217, 0.12) 26px 27px
+    );
+}
+
+/* Soundings where you've cleared. */
+.minesweeper__stage[data-world='deep-sea'] .minesweeper__cell[data-state='revealed'] {
+  background-image: radial-gradient(rgba(88, 230, 217, 0.3) 0.6px, transparent 1.1px);
+  background-size: 6px 6px;
+}
+
+.minesweeper__stage[data-world='deep-sea'] .minesweeper__progress::before {
+  box-shadow: 0 0 10px rgba(88, 230, 217, 0.5);
+}
+
+/* ---------- Motion ---------- */
+
+/* How a cover leaves as its cell is revealed. */
+@keyframes cover-sink {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(16%) scale(0.9);
+  }
+}
+
+/* The flag's idle motion. */
+@keyframes flag-bob {
+  from {
+    transform: translateY(-5%) rotate(-3deg);
+  }
+
+  to {
+    transform: translateY(5%) rotate(3deg);
+  }
+}
+
+/* The stage's slow layer. */
+@keyframes caustics-drift {
+  to {
+    transform: translate(-3%, 2%);
+  }
+}
+
+/* The particles. From just under the stage to just over it. */
+@keyframes bubble-rise {
+  to {
+    translate: 0 calc(-100cqh - 100%);
+  }
+}
+
+@keyframes bubble-sway {
+  from {
+    transform: translateX(calc(-1 * var(--sway)));
+  }
+
+  to {
+    transform: translateX(var(--sway));
+  }
+}

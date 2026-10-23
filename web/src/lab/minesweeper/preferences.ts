@@ -14,8 +14,8 @@
  * hand. None of it stops the game: what can't be read starts from the
  * defaults, and what can't be written lasts for the visit.
  */
-import { isDifficultyName, type DifficultyName } from './game-core.ts';
-import { isWorldName, type WorldName } from './worlds.ts';
+import { isDifficultyName, type DifficultyName } from './game/core.ts';
+import { isWorldName, type WorldName } from './worlds/worlds.ts';
 
 export const STORAGE_KEY = 'minesweeper';
 
@@ -33,8 +33,8 @@ export interface Preferences {
   readonly world: WorldName;
   setWorld(world: WorldName): void;
   /** Whether sound is on; off on a first visit (a page never starts making noise). */
-  readonly sound: boolean;
-  setSound(on: boolean): void;
+  readonly isSoundOn: boolean;
+  setSound(isOn: boolean): void;
   /** Records a won game's time, keeping the best for its difficulty. */
   recordWin(difficulty: DifficultyName, timeMs: number): WinRecord;
   /** The soundscape `world` played last, by name; null until it has played one. */
@@ -100,11 +100,11 @@ export function loadPreferences(storage: PreferenceStorage | null): Preferences 
     setWorld(world) {
       save((stored) => (stored.world = world));
     },
-    get sound() {
+    get isSoundOn() {
       return current.sound;
     },
-    setSound(on) {
-      save((stored) => (stored.sound = on));
+    setSound(isOn) {
+      save((stored) => (stored.sound = isOn));
     },
     recordWin(difficulty, timeMs) {
       // This page's best, or another tab's if it's better: storage that reads

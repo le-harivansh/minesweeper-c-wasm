@@ -1,6 +1,6 @@
 /**
  * Which of the game's sounds a move plays, and when. Pure, so the rules can
- * be tested without a page or a sound; audio.ts plays what this returns.
+ * be tested without a page or a sound; conductor.ts plays what this returns.
  *
  * The sounds keep time with the board's motion, from the same numbers
  * (move-timing.ts), as the prototype's do:
@@ -16,8 +16,8 @@
  *
  * Wrong flags and the loss itself play nothing: the explosion says it all.
  */
-import type { GameEvent } from '../game-core.ts';
-import { LAST_RIPPLE_RING, revealDelayMs, showDelayMs } from '../move-timing.ts';
+import { LAST_RIPPLE_RING, revealDelayMs, showDelayMs } from '../board/move-timing.ts';
+import type { GameEvent } from '../game/core.ts';
 
 /** The most mines a loss sounds (the prototype's); the rest surface in silence. */
 export const MOST_MINE_SOUNDS = 18;
@@ -35,7 +35,7 @@ export interface ScheduledSound {
 
 /** The sounds `move` plays, on a board `columns` wide. */
 export function soundsForMove(move: readonly GameEvent[], columns: number): ScheduledSound[] {
-  const won = move.some((event) => event.type === 'gameWon');
+  const isWon = move.some((event) => event.type === 'gameWon');
   const sounds: ScheduledSound[] = [];
   let deepestRing = -1;
   let explodedIndex: number | null = null;
@@ -50,7 +50,7 @@ export function soundsForMove(move: readonly GameEvent[], columns: number): Sche
         deepestRing = Math.max(deepestRing, Math.min(event.ring, LAST_RIPPLE_RING));
         break;
       case 'cellFlagged':
-        if (!won) {
+        if (!isWon) {
           sounds.push({ sound: 'flag', delayMs: 0, order: 0 });
         }
         break;

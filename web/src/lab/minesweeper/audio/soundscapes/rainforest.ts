@@ -2,7 +2,8 @@
  * The rainforest's four soundscapes, and the calls only it has. The
  * prototype's, verbatim (tmp/Minesweeper.html in the C repo).
  */
-import { randomBetween, withJitter, type AudioEngine } from '../audio-engine.ts';
+import { randomBetween, withJitter, type AudioEngine } from '../engine.ts';
+import { chorusVoice, frog, owl } from './shared-calls.ts';
 import {
   drone,
   grains,
@@ -11,8 +12,7 @@ import {
   room,
   wander,
   type Soundscape,
-} from '../soundscape.ts';
-import { chorusVoice, frog, owl } from './shared-calls.ts';
+} from './soundscape.ts';
 
 type Call = (engine: AudioEngine, at: number, output: AudioNode) => void;
 

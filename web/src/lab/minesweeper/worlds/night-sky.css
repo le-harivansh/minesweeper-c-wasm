@@ -1,0 +1,206 @@
+/*
+ * Night sky: cloud over a star field. Its tokens, its extras, then its
+ * motion; worlds.css says what each part holds.
+ */
+
+:is(.minesweeper__stage, .minesweeper__world)[data-world='night-sky'] {
+  --ground: #0a0d1c;
+  --ink: #e9ecfa;
+  --muted: rgba(233, 236, 250, 0.5);
+  --rule: rgba(233, 236, 250, 0.14);
+
+  --accent: #ffd27a;
+  --ring-color: rgba(255, 179, 107, 0.7);
+  --glow-color: rgba(255, 210, 122, 0.4);
+
+  --board-color: #0b1024;
+  --board-radius: 0;
+  --board-padding: 0px;
+  --board-outline-color: rgba(255, 255, 255, 0.08);
+
+  --tile-color: rgba(23, 28, 54, 0.92);
+  --tile-hover-color: rgba(34, 40, 74, 0.94);
+  --tile-pressed-color: rgba(15, 18, 38, 0.98);
+  --tile-border: 1px solid rgba(10, 13, 28, 0.9);
+  --revealed-color: transparent;
+  --revealed-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+  --revealed-fade: none;
+  --cell-radius: 0;
+  --cell-gap: 0px;
+
+  /* The stellar sequence, hot to cool: blue-white 1 to red 7. */
+  --number-1-color: #6fa0ff;
+  --number-2-color: #b8e1ff;
+  --number-3-color: #fff2c4;
+  --number-4-color: #ffd27a;
+  --number-5-color: #ffa75a;
+  --number-6-color: #ff6f5e;
+  --number-7-color: #ff4d4d;
+  --number-8-color: #ff6ad5;
+  --number-font: var(--font-sans);
+  --number-weight: 500;
+  --number-width: 110%;
+  --number-scale: 0.56;
+  --hud-weight: 300;
+  --hud-letter-spacing: 0.02em;
+
+  --flag-color: #ffd27a;
+  --flag-shape: url('../assets/glyphs/star.svg?no-inline');
+  --flag-inset: 20%;
+  --flag-origin: 50% 50%;
+  --flag-idle: flag-twinkle 2.6s ease-in-out infinite alternate;
+  --mine-color: #ffb36b;
+  --mine-shape: url('../assets/glyphs/black-hole.svg?no-inline');
+  --exploded-color: #ff5a3c;
+  --exploded-mine-color: #ffffff;
+  /* Crossed out in beacon red, an aircraft-warning light's at night. */
+  --wrong-flag-color: #ff3b4f;
+  --wrong-flag-halo-color: #0a0d1c;
+  --cover-exit: cover-part 0.4s ease-out;
+  --cover-origin: 50% 50%;
+
+  --button-radius: 999px;
+  --picker-color: #0a0d1c;
+}
+
+.minesweeper__stage[data-world='night-sky'] {
+  background: radial-gradient(110% 70% at 50% 0%, #141a3c 0%, #0a0d1c 60%);
+}
+
+/*
+ * A shooting star: a point at (--x, --y), turned the way it falls, that flies
+ * --dx, --dy and fades. Its tail trails behind it and grows as it gathers
+ * speed. The prototype's one, every 19 seconds from one place, mostly flew
+ * under the board: particles.ts picks each one's flight where it shows.
+ */
+.minesweeper__stage[data-world='night-sky'] .minesweeper__meteor {
+  top: var(--y);
+  left: var(--x);
+  width: 0;
+  height: 0;
+  rotate: var(--angle);
+  opacity: 0;
+  animation: meteor-fly var(--duration) linear both;
+}
+
+.minesweeper__stage[data-world='night-sky'] .minesweeper__meteor::before,
+.minesweeper__stage[data-world='night-sky'] .minesweeper__meteor::after {
+  content: '';
+  position: absolute;
+}
+
+/* The tail. */
+.minesweeper__stage[data-world='night-sky'] .minesweeper__meteor::before {
+  top: -1px;
+  right: 0;
+  width: var(--length);
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(184, 225, 255, 0.35) 55%,
+    rgba(255, 255, 255, 0.95)
+  );
+  transform-origin: 100% 50%;
+  animation: meteor-tail var(--duration) ease-out both;
+}
+
+/* The head: a point of light. */
+.minesweeper__stage[data-world='night-sky'] .minesweeper__meteor::after {
+  top: -1.5px;
+  right: -1.5px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px 2px rgba(184, 225, 255, 0.6);
+}
+
+/*
+ * Stars, seen where the cloud has parted (revealed cells are clear). The board
+ * view sets the sky on the board (star-field.ts): the stars that stay, and the
+ * brighter ones that twinkle over them.
+ */
+.minesweeper__stage[data-world='night-sky'] .minesweeper__board {
+  background-image: var(--star-field);
+}
+
+.minesweeper__stage[data-world='night-sky'] .minesweeper__board::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: var(--twinkling-stars);
+  animation: stars-twinkle 4.6s ease-in-out infinite alternate;
+}
+
+.minesweeper__stage[data-world='night-sky'] .minesweeper__label {
+  letter-spacing: 0.2em;
+}
+
+.minesweeper__stage[data-world='night-sky'] .minesweeper__new-game {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- Motion ---------- */
+
+/* How a cover leaves as its cell is revealed. */
+@keyframes cover-part {
+  from {
+    filter: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  to {
+    filter: blur(2.5px);
+    opacity: 0;
+    transform: translateY(-12%) scale(1.06);
+  }
+}
+
+/* The flag's idle motion. */
+@keyframes flag-twinkle {
+  from {
+    opacity: 0.75;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+/* The stage's slow layer. */
+@keyframes stars-twinkle {
+  from {
+    opacity: 0.25;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* The particles. Head first, along the way it's turned: its bright end leads. */
+@keyframes meteor-fly {
+  12%,
+  65% {
+    opacity: var(--brightness);
+  }
+
+  to {
+    opacity: 0;
+    translate: var(--dx) var(--dy);
+  }
+}
+
+@keyframes meteor-tail {
+  from {
+    scale: 0.15 1;
+  }
+}
