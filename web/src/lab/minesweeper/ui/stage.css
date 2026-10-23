@@ -105,16 +105,25 @@
   position: absolute;
 }
 
-/* The HUD: mines left, the status over the progress bar, the time. */
+/*
+ * The HUD: mines left, the status over the progress bar, the time. The bar
+ * sits in the middle, over the board: the two sides keep the same room,
+ * whatever a world's numbers measure, so the bar doesn't move with them, nor
+ * when the clock reaches ten minutes. That room is the widest a side gets:
+ * the clock at five characters in Deep sea's mono (5 × 0.57em).
+ */
 
 .minesweeper__hud {
   --hud-number-size: 40px;
+  --hud-side: calc(var(--hud-number-size) * 2.85);
+  --hud-bar-min: 140px;
 
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns:
+    minmax(var(--hud-side), 1fr) minmax(var(--hud-bar-min), 360px)
+    minmax(var(--hud-side), 1fr);
   gap: 18px;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: end;
   margin-bottom: 16px;
 }
 
@@ -148,11 +157,7 @@
 
 .minesweeper__progress-area {
   display: grid;
-  flex: 1;
   gap: 8px;
-  align-self: flex-end;
-  min-width: 140px;
-  max-width: 360px;
   padding-bottom: 6px;
 }
 
@@ -176,12 +181,25 @@
 @media (max-width: 540px) {
   .minesweeper__hud {
     --hud-number-size: 32px;
+    --hud-bar-min: 72px;
 
     gap: 12px;
   }
+}
+
+/*
+ * On the narrowest phones (a 320 px one) the line has no room for the bar
+ * between the sides (they and the shortest bar need 319 px of game): it goes
+ * under them, as wide as the HUD.
+ */
+@container minesweeper (width < 320px) {
+  .minesweeper__hud {
+    grid-template-columns: 1fr 1fr;
+  }
 
   .minesweeper__progress-area {
-    min-width: 72px;
+    grid-row: 2;
+    grid-column: 1 / -1;
   }
 }
 
