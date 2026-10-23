@@ -1,7 +1,7 @@
 /*
- * The worlds: how the stage looks, as the prototype (tmp/Minesweeper.html in
- * the C repo) draws its four, every value as it is there. One file per world,
- * imported here in the order worlds.ts names them.
+ * The worlds: how the stage looks, as the prototype draws its four, every
+ * value as it is there. One file per world, imported here in the order
+ * worlds.ts names them.
  *
  * Each file starts with its world's block of tokens, set on the stage and on
  * the world's own button in the World picker, which wears its world's

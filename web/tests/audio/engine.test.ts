@@ -4,8 +4,7 @@
  * play without a slip the fake would catch, and a soundscape that has faded
  * out stops for good.
  *
- * What they sound like is for the ear. That they are the prototype's, node
- * for node, is checked against it by tmp/verify-sound/ in the C repo.
+ * What they sound like is for the ear.
  *
  * Run with `make test-wasm`. Node runs this file as it is, by stripping the
  * types without checking them; `pnpm check` (astro check) checks them.

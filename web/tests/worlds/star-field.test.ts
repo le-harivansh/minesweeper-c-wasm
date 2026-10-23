@@ -14,10 +14,9 @@ import { createStarField } from '../../src/lab/minesweeper/worlds/star-field.ts'
 const starsOf = (list: string) => list.split(/,(?=radial-gradient)/);
 
 /**
- * The expected stars are the prototype's own output: its stars() in
- * tmp/Minesweeper.html (C repo), run as it is. The first and last of each
- * list pin the order of the draws, which a reordering would change for
- * every star after it.
+ * The expected stars are the prototype's own output: its stars(), run as it
+ * is. The first and last of each list pin the order of the draws, which a
+ * reordering would change for every star after it.
  */
 test("the sky is the prototype's: 80 stars that stay, 16 that twinkle", () => {
   const fixed = starsOf(createStarField().fixed);

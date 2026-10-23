@@ -6,12 +6,12 @@
  *        └─▶ echo: delay 0.34 s, feedback 0.42, lowpass 2.4 kHz ┤
  *   soundscapes ─▶ ambience bus (ducks under an explosion) ─────┴─▶ master 0.6 ─▶ speakers
  *
- * It is the prototype's (tmp/Minesweeper.html in the C repo), node for node:
- * the same nodes made in the same order, the same values, the same random
- * draws. Only the names are new, in words: a sound is told when (at), how
- * fast it rises (attack), how long it dies over (decay) and how loud it peaks
- * (gain). The prototype's own levels stay: its volume slider's 0.6 is the
- * master, and the system volume does the rest.
+ * It is the prototype's, node for node: the same nodes made in the same
+ * order, the same values, the same random draws. Only the names are new, in
+ * words: a sound is told when (at), how fast it rises (attack), how long it
+ * dies over (decay) and how loud it peaks (gain). The prototype's own levels
+ * stay: its volume slider's 0.6 is the master, and the system volume does
+ * the rest.
  *
  * Nothing here touches the page: the soundscapes ask isPaused() rather than
  * reading document.hidden, so Node can run it all on a fake context.

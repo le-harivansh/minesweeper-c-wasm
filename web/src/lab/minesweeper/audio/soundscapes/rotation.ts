@@ -10,7 +10,7 @@
  * the one it played last after that, which the preferences keep by name.
  */
 
-/** How long a soundscape plays before the next: the user's pick, 45 seconds (2026-10-23). */
+/** How long a soundscape plays before the next: 45 seconds, by choice (2026-10-23). */
 export const SOUNDSCAPE_SECONDS = 45;
 
 /** The crossfade from one soundscape to the next: the prototype's. */

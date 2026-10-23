@@ -1,6 +1,6 @@
 /**
  * The dune's four soundscapes, and the calls only it has. The prototype's,
- * verbatim (tmp/Minesweeper.html in the C repo).
+ * verbatim.
  */
 import { randomBetween, type AudioEngine } from '../engine.ts';
 import { D_HIJAZ } from '../sfx.ts';

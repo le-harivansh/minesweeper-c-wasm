@@ -11,12 +11,11 @@
  * (--ground, --ink, --muted, --rule) and the game's (--tile-color,
  * --cover-exit, …).
  *
- * The look and the motion are the prototype's (tmp/Minesweeper.html in the C
- * repo), its values as they are. Every animation ends where the element's own
- * style already is: what appears animates from hidden to its style, what
- * leaves has its hidden end as its style. With motion off (the end of this
- * file, and the site turns every animation off too), the game shows the same
- * state, at once.
+ * The look and the motion are the prototype's, its values as they are. Every
+ * animation ends where the element's own style already is: what appears
+ * animates from hidden to its style, what leaves has its hidden end as its
+ * style. With motion off (the end of this file, and the site turns every
+ * animation off too), the game shows the same state, at once.
  */
 
 /*

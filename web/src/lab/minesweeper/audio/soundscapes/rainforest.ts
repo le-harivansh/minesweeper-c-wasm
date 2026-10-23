@@ -1,6 +1,6 @@
 /**
  * The rainforest's four soundscapes, and the calls only it has. The
- * prototype's, verbatim (tmp/Minesweeper.html in the C repo).
+ * prototype's, verbatim.
  */
 import { randomBetween, withJitter, type AudioEngine } from '../engine.ts';
 import { chorusVoice, frog, owl } from './shared-calls.ts';

@@ -1,7 +1,7 @@
 /*
  * The controls: the row above the stage (the difficulty, the world, Sound)
- * and New game in the stage's footer. The row is the prototype's
- * (tmp/Minesweeper.html: .bar, .seg), New game its secondary .sbtn.
+ * and New game in the stage's footer. The row is the prototype's (its .bar
+ * and .seg), New game its secondary .sbtn.
  *
  * The row stands on the page, so it takes the page's colours. A world's
  * segment carries its world's tokens (worlds/), --ink and --ground among

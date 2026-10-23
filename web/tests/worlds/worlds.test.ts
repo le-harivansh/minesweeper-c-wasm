@@ -189,7 +189,7 @@ const NON_TEXT = 3;
  * target. Clear colours are painted over what lies under them: a tile over
  * the board, the board over the stage.
  *
- * The worlds are the prototype's colours as they are (the user's call,
+ * The worlds are the prototype's colours as they are (a deliberate choice,
  * 2026-10-22), and they don't reach every target: night sky's cloud is
  * hardly lighter than the sky it parts from (1.12), rainforest's scarlet
  * leaf is as light as the canopy (2.0), and a few exploded mines sit under
@@ -200,7 +200,7 @@ const NON_TEXT = 3;
  * in the same hue: dune's muted ink (3.04) and its 3 and 5 (3.99, 3.28), and
  * rainforest's 5 (3.93).
  *
- * A wrong flag's cross is ours, not the prototype's (the user's call too):
+ * A wrong flag's cross is ours, not the prototype's (a deliberate choice too):
  * it lies on its halo, and the halo on the flag, so each pair must stand
  * apart, as must the cross from the tile around it. So is the chosen World
  * button's fill, which its name and its flag lie on.

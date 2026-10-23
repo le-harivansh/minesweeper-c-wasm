@@ -32,8 +32,8 @@ import { requireElement } from '../utils.ts';
 import { isWorldName, type WorldName } from './worlds.ts';
 
 /**
- * How many particles each world has, how fast and how faint: tuned by eye
- * in a sketch (tmp/sketch-ambience/ in the C repo), 2026-10-22.
+ * How many particles each world has, how fast and how faint: tuned by eye,
+ * 2026-10-22.
  */
 export const PARTICLES = {
   'deep-sea': {

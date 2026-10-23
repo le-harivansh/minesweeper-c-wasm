@@ -1,8 +1,8 @@
 /**
  * The night sky's stars: 80 that stay and 16 that twinkle, each a small
- * radial gradient somewhere on the board, as the prototype draws them
- * (tmp/Minesweeper.html in the C repo). A star's place is in percent, so the
- * sky spreads with the board; its size is in pixels, so a star stays a point.
+ * radial gradient somewhere on the board, as the prototype draws them. A
+ * star's place is in percent, so the sky spreads with the board; its size is
+ * in pixels, so a star stays a point.
  *
  * Seeded, so the sky is the same on every board and every visit. The board
  * view sets the two lists on the board (--star-field, --twinkling-stars) and

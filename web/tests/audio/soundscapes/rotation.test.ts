@@ -17,7 +17,7 @@ import {
 /** The deep sea's, in their order. */
 const NAMES = ['sounding', 'reef-shelf', 'abyss', 'kelp-current'];
 
-/** The user's pick: 45 seconds. */
+/** 45 seconds, by choice. */
 test('the next soundscape is due after 45 seconds heard, then 45 more', () => {
   const rotation = createSoundscapeRotation();
   const due: number[] = [];

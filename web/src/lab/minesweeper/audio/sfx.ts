@@ -4,12 +4,11 @@
  * and a win; and the click the Difficulty and World buttons share.
  * move-sounds.ts says which a move plays, and when.
  *
- * The prototype's sounds (tmp/Minesweeper.html in the C repo), verbatim, but
- * for two changes: its refused chord's thud went with chording, and the
- * new-game sounds are new. Those four were designed in the sketch
- * (tmp/sketch-sound/ in the C repo), and picked by ear, 2026-10-23: each
- * rises or holds level (a fall reads as "back"), in its world's family of
- * sounds, but apart from its world's other sounds and soundscapes.
+ * The prototype's sounds, verbatim, but for two changes: its refused chord's
+ * thud went with chording, and the new-game sounds are new. Those four were
+ * picked by ear, 2026-10-23: each rises or holds level (a fall reads as
+ * "back"), in its world's family of sounds, but apart from its world's other
+ * sounds and soundscapes.
  */
 import type { WorldName } from '../worlds/worlds.ts';
 import { withJitter, type AudioEngine, type StruckPartial } from './engine.ts';
@@ -36,8 +35,8 @@ const G_PENTATONIC = [392, 440, 523.25, 587.33, 659.25];
 export const D_HIJAZ = [293.66, 311.13, 369.99, 392, 440, 466.16, 523.25, 587.33];
 
 /**
- * Each new-game sound's level, measured in the sketch so that it sits between
- * its world's flag and win (A-weighted, the loudest 400 ms).
+ * Each new-game sound's level, measured so that it sits between its world's
+ * flag and win (A-weighted, the loudest 400 ms).
  */
 const NEW_GAME_LEVELS: Record<WorldName, number> = {
   'deep-sea': 0.22,

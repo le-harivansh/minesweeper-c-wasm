@@ -1,6 +1,6 @@
 /**
  * A soundscape: what a world sounds like between moves. Every one follows the
- * prototype's recipe (tmp/Minesweeper.html in the C repo):
+ * prototype's recipe:
  *
  *   bed          two or three continuous layers, drifting
  *   texture      one continuous stream of grains, or a chorus

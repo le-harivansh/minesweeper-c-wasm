@@ -1,7 +1,7 @@
 /**
  * When each part of a move shows: a reveal ripples out ring by ring from the
  * click, and a loss shows the other mines nearest the exploded one first.
- * The timings are the prototype's (tmp/Minesweeper.html in the C repo).
+ * The timings are the prototype's.
  *
  * The board view times the motion from these, and the sound times its notes
  * from them, so the two keep together. A file of its own, so the sound's

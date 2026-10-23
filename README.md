@@ -55,6 +55,8 @@ A `ring` is how many steps a revealed cell is from the one clicked; the front en
 
 The front end is one self-contained folder, [`web/src/lab/minesweeper/`](web/src/lab/minesweeper/), whose only entry is `Minesweeper.astro`. It imports nothing from outside itself, so it goes into the site as it is. Around it, `web/` is a minimal Astro project that mirrors harivansh.dev: the same versions, a stand-in Lab page and, in production builds, the site's Content Security Policy.
 
+Its look, motion and sound are ported, value for value, from an HTML prototype that isn't published here: that is "the prototype" the code's comments cite.
+
 To embed it elsewhere, note that compiling WebAssembly needs `'wasm-unsafe-eval'` in the page's `script-src`. Without it the browser refuses the module, and the game says it failed to load.
 
 ## Getting started
